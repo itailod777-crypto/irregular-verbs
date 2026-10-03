@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<script>
+  (function () { try { var t = localStorage.getItem('irregularVerbs.theme'); if (!t) t = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'; document.documentElement.setAttribute('data-theme', t); } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); } })();
+</script>
+<title>Irregular Verbs - פעלים בלתי רגילים</title>
+<style>
+  /* ---------- THEME ---------- */
+  :root {
+    --bg: #f3f5fa; --bg-grad: radial-gradient(1200px 600px at 100% -10%, #e6ecff 0%, transparent 60%), radial-gradient(900px 500px at -10% 0%, #fdf0e6 0%, transparent 55%);
+    --surface: #ffffff; --surface-2: #f7f8fc; --border: #e3e7f0; --text: #1e2533; --muted: #667085;
+    --shadow-sm: 0 1px 2px rgba(16,24,40,.05), 0 1px 3px rgba(16,24,40,.06);
+    --shadow: 0 4px 12px rgba(16,24,40,.06), 0 12px 32px rgba(16,24,40,.08);
+    --blue: #2563eb; --blue-soft: #eaf1ff; --blue-ink: #1d4ed8;
+    --violet: #7c3aed; --violet-soft: #f3edff; --violet-ink: #5b21b6;
+    --orange: #ea580c; --orange-soft: #fff1e8; --orange-ink: #c2410c;
+    --green: #16a34a; --green-soft: #e8f8ee; --green-ink: #15803d;
+    --red: #dc2626; --red-soft: #fdecec; --red-ink: #b91c1c;
+    --gold: #d97706; --gold-soft: #fef6e4;
+    --card-back: linear-gradient(145deg, #2563eb 0%, #4f46e5 100%);
+    --accent: var(--blue); --accent-soft: var(--blue-soft); --accent-ink: var(--blue-ink);
+    --radius: 20px;
+    color-scheme: light;
+  }
+  html[data-theme="dark"] {
+    --bg: #0f1420; --bg-grad: radial-gradient(1200px 600px at 100% -10%, #1b2440 0%, transparent 60%), radial-gradient(900px 500px at -10% 0%, #2a1d1a 0%, transparent 55%);
+    --surface: #182032; --surface-2: #1e2740; --border: #2b3550; --text: #e7ebf3; --muted: #9aa4b8;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.3); --shadow: 0 6px 24px rgba(0,0,0,.35);
+    --blue: #3b82f6; --blue-soft: #1c2a4a; --blue-ink: #93b4ff;
+    --violet: #8b5cf6; --violet-soft: #2a2146; --violet-ink: #c4b0ff;
+    --orange: #ea6a1f; --orange-soft: #3a2518; --orange-ink: #ffb07a;
+    --green: #22a559; --green-soft: #15301f; --green-ink: #7ee2a3;
+    --red: #e04848; --red-soft: #3a1c1f; --red-ink: #ff9b9b;
+    --gold: #f0a72e; --gold-soft: #33281a;
+    --card-back: linear-gradient(145deg, #2a4fc4 0%, #4338ca 100%);
+    color-scheme: dark;
+  }
+  body[data-mode="quiz"] { --accent: var(--violet); --accent-soft: var(--violet-soft); --accent-ink: var(--violet-ink); }
+  body[data-mode="write"] { --accent: var(--orange); --accent-soft: var(--orange-soft); --accent-ink: var(--orange-ink); }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; padding: 28px 16px 48px; background: var(--bg); background-image: var(--bg-grad); background-attachment: fixed;
+    color: var(--text); line-height: 1.5;
+    font-family: "Rubik", "Assistant", "Heebo", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Hebrew", "Arial Hebrew", Arial, sans-serif;
+    display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+    transition: background-color .3s, color .3s;
+  }
+  .container { width: 100%; max-width: 780px; display: flex; flex-direction: column; align-items: center; position: relative; }
+  header { text-align: center; margin-bottom: 22px; width: 100%; }
+  h1 { margin: 4px 0 6px; font-size: clamp(24px, 5.2vw, 36px); font-weight: 800; letter-spacing: -.01em; }
+  h1 .en { color: var(--accent); transition: color .3s; }
+  .subtitle { margin: 0; color: var(--muted); font-size: clamp(14px, 3.6vw, 17px); }
+  .theme-toggle {
+    position: absolute; top: 0; left: 0; width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); font-size: 19px; box-shadow: var(--shadow-sm); display: grid; place-items: center;
+    transition: transform .2s, background .3s;
+  }
+  .theme-toggle:hover { transform: rotate(-15deg) scale(1.05); }
+  .ltr { direction: ltr; unicode-bidi: isolate; }
+  button { font-family: inherit; cursor: pointer; color: inherit; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+  /* ---------- MODE TABS ---------- */
+  .modes {
+    display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 18px; padding: 6px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 999px; box-shadow: var(--shadow-sm);
+  }
+  .mode-btn {
+    border: none; background: transparent; color: var(--muted); padding: 10px 18px; border-radius: 999px; font-size: 16px; font-weight: 700;
+    transition: background .25s, color .25s, box-shadow .25s, transform .15s;
+  }
+  .mode-btn:hover { color: var(--text); background: var(--surface-2); }
+  .mode-btn.active { color: #fff; box-shadow: 0 4px 14px rgba(0,0,0,.15); }
+  .mode-btn[data-mode="cards"].active { background: var(--blue); }
+  .mode-btn[data-mode="quiz"].active { background: var(--violet); }
+  .mode-btn[data-mode="write"].active { background: var(--orange); }
+
+  /* ---------- PILLS ---------- */
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 20px; align-items: center; }
+  .pill {
+    background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 7px 15px; border-radius: 999px;
+    font-size: 14px; font-weight: 500; box-shadow: var(--shadow-sm); transition: background .2s, color .2s, border-color .2s, transform .15s;
+  }
+  .pill:hover { border-color: var(--accent); color: var(--accent-ink); transform: translateY(-1px); }
+  .pill.active, .pill.active:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .pill.hard { border-color: color-mix(in srgb, var(--gold) 55%, var(--border)); }
+  .pill.hard.active { background: var(--gold); border-color: var(--gold); color: #fff; }
+
+  .part-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px 6px; box-shadow: var(--shadow-sm); width: 100%; max-width: 640px; margin-bottom: 18px; }
+  .part-box h2 { font-size: 14px; margin: 0 0 10px; text-align: center; color: var(--muted); font-weight: 600; letter-spacing: .02em; }
+  .part-box .pills { margin-bottom: 8px; }
+  .link-btn { background: none; border: none; color: var(--red-ink); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; padding: 4px 6px; }
+
+  .section { width: 100%; display: none; flex-direction: column; align-items: center; }
+  .section.show { display: flex; animation: fadeUp .35s ease both; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  /* ---------- CARDS ---------- */
+  .counter { color: var(--muted); margin-bottom: 12px; font-size: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  #cardCounter { font-weight: 600; }
+  .small-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 5px 13px; font-size: 13px; box-shadow: var(--shadow-sm); transition: background .2s, border-color .2s; }
+  .small-btn:hover { border-color: var(--accent); }
+  .scene { width: 100%; max-width: 540px; height: 300px; perspective: 1400px; margin-bottom: 22px; }
+  .card { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform .65s cubic-bezier(.2,.8,.2,1); cursor: pointer; border-radius: 26px; }
+  .card.flipped { transform: rotateY(180deg); }
+  .card:focus-visible { outline-offset: 6px; }
+  .face {
+    position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 26px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 22px; box-shadow: var(--shadow);
+  }
+  .front { background: var(--surface); border: 1px solid var(--border); }
+  .front::before { content: ""; position: absolute; top: 0; inset-inline: 0; height: 6px; border-radius: 26px 26px 0 0; background: linear-gradient(90deg, var(--blue), #6366f1); }
+  .back { background: var(--card-back); color: #fff; transform: rotateY(180deg); }
+  .front .v1 { color: var(--blue-ink); font-size: clamp(40px, 10vw, 54px); font-weight: 800; margin-bottom: 8px; letter-spacing: -.01em; }
+  .meaning { font-size: 21px; text-align: center; font-weight: 500; }
+  .front .meaning { color: var(--muted); }
+  .hint { position: absolute; bottom: 14px; font-size: 13px; opacity: .6; }
+  .forms { display: flex; gap: 10px; width: 100%; justify-content: space-around; margin-bottom: 20px; direction: ltr; }
+  .form-col { text-align: center; flex: 1; min-width: 0; background: rgba(255,255,255,.12); border-radius: 16px; padding: 12px 6px; }
+  .form-col .lbl { font-size: 12px; opacity: .85; margin-bottom: 4px; letter-spacing: .03em; }
+  .form-col .val { font-size: 26px; font-weight: 800; overflow-wrap: anywhere; line-height: 1.2; }
+  .forms.long .val { font-size: 21px; }
+  .back .meaning { color: rgba(255,255,255,.92); }
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .btn {
+    border: 1px solid transparent; border-radius: 14px; padding: 11px 22px; font-size: 16px; font-weight: 700;
+    background: var(--surface); color: var(--text); border-color: var(--border); box-shadow: var(--shadow-sm);
+    transition: transform .15s, filter .2s, box-shadow .2s;
+  }
+  .btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: var(--shadow); }
+  .btn:active:not(:disabled) { transform: translateY(0) scale(.98); }
+  .btn.primary { background: var(--blue); color: #fff; border-color: transparent; }
+  .btn.green { background: var(--green); color: #fff; border-color: transparent; }
+  .btn.purple { background: var(--violet); color: #fff; border-color: transparent; }
+  .btn.orange { background: var(--orange); color: #fff; border-color: transparent; }
+  .kbd-hint { color: var(--muted); font-size: 12.5px; margin-top: 14px; text-align: center; }
+  .remove-hard { margin-top: 12px; color: var(--red-ink); }
+
+  /* ---------- EXAMS ---------- */
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 26px; box-shadow: var(--shadow); padding: 28px 22px; width: 100%; max-width: 640px; text-align: center; animation: fadeUp .3s ease both; }
+  .progress { width: 100%; max-width: 640px; height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; margin-bottom: 14px; }
+  .progress > div { height: 100%; width: 0; transition: width .45s cubic-bezier(.2,.8,.2,1); background: var(--accent); border-radius: 999px; }
+  .score-line { display: inline-block; color: var(--accent-ink); background: var(--accent-soft); font-weight: 700; margin-bottom: 14px; font-size: 15px; padding: 5px 14px; border-radius: 999px; }
+  .q-v1 { font-size: clamp(36px, 9vw, 50px); font-weight: 800; margin: 2px 0; color: var(--accent-ink); letter-spacing: -.01em; }
+  .q-meaning { font-size: 20px; margin-bottom: 16px; color: var(--muted); font-weight: 500; }
+  .prompt { color: var(--muted); margin-bottom: 16px; font-size: 15px; }
+  .options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .opt {
+    background: var(--surface-2); border: 2px solid var(--border); border-radius: 16px; padding: 15px 10px; font-size: 19px; font-weight: 700;
+    color: var(--text); direction: ltr; transition: background .2s, border-color .2s, transform .15s;
+  }
+  .opt:hover:not(:disabled) { border-color: var(--violet); background: var(--violet-soft); transform: translateY(-1px); }
+  .opt:disabled { opacity: 1; cursor: default; }
+  .opt.correct { background: var(--green-soft); border-color: var(--green); color: var(--green-ink); animation: pop .3s ease; }
+  .opt.wrong { background: var(--red-soft); border-color: var(--red); color: var(--red-ink); animation: shake .35s ease; }
+  .opt.dim { opacity: .45; }
+  @keyframes pop { 50% { transform: scale(1.04); } }
+  @keyframes shake { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
+  .feedback { min-height: 28px; margin: 16px 0 6px; font-weight: 700; font-size: 17px; }
+  .feedback.ok { color: var(--green-ink); }
+  .feedback.bad { color: var(--red-ink); }
+  .exam-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 14px; }
+  .end h2 { margin-top: 0; font-size: 26px; }
+  .big-score { font-size: 46px; font-weight: 800; margin: 8px 0 14px; color: var(--accent-ink); }
+
+  /* ---------- WRITING ---------- */
+  .stats { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px; font-weight: 600; box-shadow: var(--shadow-sm); font-size: 15px; }
+  .inputs { display: flex; gap: 14px; justify-content: center; direction: ltr; margin-bottom: 8px; }
+  .field { display: flex; flex-direction: column; align-items: center; flex: 1; max-width: 240px; }
+  .field label { font-size: 13px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
+  .field input {
+    width: 100%; padding: 12px 14px; font-size: 21px; font-weight: 600; border: 2px solid var(--border); border-radius: 14px; direction: ltr; text-align: center;
+    font-family: inherit; background: var(--surface-2); color: var(--text); transition: border-color .2s, box-shadow .2s, background .2s;
+  }
+  .field input:focus { border-color: var(--orange); outline: none; box-shadow: 0 0 0 4px color-mix(in srgb, var(--orange) 22%, transparent); background: var(--surface); }
+  .field input.ok { border-color: var(--green); background: var(--green-soft); color: var(--green-ink); }
+  .field input.bad { border-color: var(--red); background: var(--red-soft); color: var(--red-ink); }
+  .answer { direction: ltr; display: inline-block; font-weight: 800; }
+  .lists { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; max-width: 640px; margin-top: 18px; }
+  .list-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow-sm); min-height: 84px; }
+  .list-box h3 { margin: 0 0 8px; font-size: 15px; }
+  .list-box.success h3 { color: var(--green-ink); }
+  .list-box.fail h3 { color: var(--red-ink); }
+  .list-box ul { list-style: none; margin: 0; padding: 0; font-size: 14.5px; direction: ltr; text-align: left; max-height: 230px; overflow: auto; }
+  .list-box li { padding: 4px 0; border-bottom: 1px solid var(--border); }
+  .list-box li:last-child { border-bottom: none; }
+  .empty-note { color: var(--muted); font-size: 13px; direction: rtl; text-align: right; }
+  .hidden { display: none !important; }
+
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+  @media (max-width: 560px) {
+    body { padding: 16px 10px 32px; }
+    header { padding: 0 44px; }
+    .theme-toggle { width: 38px; height: 38px; font-size: 17px; }
+    .modes { border-radius: 22px; }
+    .mode-btn { padding: 9px 12px; font-size: 14px; }
+    .pill { padding: 6px 11px; font-size: 13px; }
+    .scene { height: 260px; }
+    .meaning { font-size: 18px; }
+    .forms { gap: 6px; }
+    .form-col { padding: 10px 3px; border-radius: 12px; }
+    .form-col .val { font-size: 19px; }
+    .form-col .lbl { font-size: 10.5px; }
+    .forms.long .val { font-size: 15.5px; overflow-wrap: normal; }
+    .btn { padding: 10px 15px; font-size: 15px; }
+    .options { grid-template-columns: 1fr; }
+    .opt { font-size: 18px; padding: 13px 8px; }
+    .inputs { flex-direction: column; align-items: center; gap: 10px; }
+    .field { max-width: 100%; width: 100%; }
+    .lists { grid-template-columns: 1fr; }
+    .panel { padding: 22px 14px; border-radius: 22px; }
+  }
+  /* ---------- v4 additions ---------- */
+  .parts-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; font-size: 14.5px; margin-bottom: 10px; color: var(--text); }
+  .parts-row select { font: inherit; font-weight: 700; padding: 5px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); cursor: pointer; }
+  .parts-info { color: var(--muted); font-size: 12.5px; direction: rtl; }
+  .plus { display: inline-block; margin-inline-start: 6px; background: var(--green-soft); color: var(--green-ink); padding: 0 8px; border-radius: 999px; font-size: 14px; }
+  .end-sub { color: var(--muted); margin-bottom: 8px; }
+  /* ---------- v3 additions ---------- */
+  :root { --teal: #0f766e; --teal-soft: #e6f6f4; --teal-ink: #0f766e; --pink: #be185d; --pink-soft: #fdedf4; --pink-ink: #be185d; --amber: #b45309; --amber-soft: #fef3e2; --amber-ink: #b45309; }
+  html[data-theme="dark"] { --teal: #14b8a6; --teal-soft: #123532; --teal-ink: #5eead4; --pink: #ec4899; --pink-soft: #3a1a2b; --pink-ink: #f9a8d4; --amber: #d97706; --amber-soft: #36270f; --amber-ink: #fcd34d; }
+  body[data-mode="trans"] { --accent: var(--teal); --accent-soft: var(--teal-soft); --accent-ink: var(--teal-ink); }
+  body[data-mode="tquiz"] { --accent: var(--pink); --accent-soft: var(--pink-soft); --accent-ink: var(--pink-ink); }
+  body[data-mode="match"] { --accent: var(--amber); --accent-soft: var(--amber-soft); --accent-ink: var(--amber-ink); }
+  .mode-btn[data-mode="trans"].active { background: var(--teal); }
+  .mode-btn[data-mode="tquiz"].active { background: var(--pink); }
+  .mode-btn[data-mode="match"].active { background: var(--amber); }
+  .modes-wrap { display: flex; flex-direction: column; gap: 8px; align-items: center; margin-bottom: 8px; width: 100%; }
+  .mode-row { display: flex; align-items: center; gap: 10px; justify-content: center; max-width: 100%; }
+  .mode-label { font-size: 13px; font-weight: 700; color: var(--muted); min-width: 42px; text-align: center; }
+  .modes-wrap .modes { margin-bottom: 0; }
+  .mode-desc { color: var(--accent-ink); background: var(--accent-soft); border-radius: 14px; padding: 8px 16px; margin: 6px 0 18px; text-align: center; font-size: 15px; font-weight: 500; max-width: 640px; transition: background .3s, color .3s; }
+  .howto { width: 100%; max-width: 640px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 4px 16px; margin-bottom: 16px; box-shadow: var(--shadow-sm); }
+  .howto summary { cursor: pointer; font-weight: 700; padding: 8px 0; list-style-position: inside; }
+  .howto ol { margin: 0 0 10px; padding-inline-start: 20px; color: var(--text); font-size: 14.5px; }
+  .howto li { margin-bottom: 4px; }
+  .dir-box { display: inline-flex; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 4px; margin-bottom: 16px; box-shadow: var(--shadow-sm); }
+  .dir-btn { border: none; background: transparent; padding: 7px 16px; border-radius: 999px; font-size: 14.5px; font-weight: 600; color: var(--muted); transition: background .2s, color .2s; }
+  .dir-btn.active { background: var(--accent); color: #fff; }
+  .cat-label { text-align: center; font-size: 13px; color: var(--muted); margin: 2px 0 8px; }
+  .badge { display: inline-block; margin-inline-start: 6px; font-size: 11.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); direction: ltr; }
+  .pill.active .badge { background: rgba(255,255,255,.25); color: #fff; border-color: transparent; }
+  .badge.done { background: var(--green-soft); color: var(--green-ink); border-color: transparent; }
+  .rule-box { width: 100%; max-width: 560px; background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 16px; padding: 10px 16px; margin-bottom: 16px; text-align: center; animation: fadeUp .3s ease both; }
+  .rule-title { font-size: 13px; font-weight: 700; color: var(--accent-ink); margin-bottom: 2px; }
+  .rule-text { font-size: 16px; color: var(--text); }
+  .rule-ex { font-weight: 800; white-space: nowrap; }
+  mark.hl { background: color-mix(in srgb, var(--gold) 30%, transparent); color: inherit; border-radius: 4px; padding: 0 1px; box-shadow: inset 0 -2px 0 var(--gold); }
+  .back mark.hl { background: rgba(253, 230, 138, .3); color: #fef08a; box-shadow: inset 0 -2px 0 #fde68a; }
+  .trans-big { font-size: clamp(30px, 8vw, 44px); font-weight: 800; text-align: center; line-height: 1.25; }
+  .front .v1.he-big { font-size: clamp(30px, 8vw, 44px); line-height: 1.25; text-align: center; }
+  body[data-mode="trans"] .front::before { background: linear-gradient(90deg, var(--teal), #22c55e); }
+  body[data-mode="trans"] .front .v1 { color: var(--teal-ink); }
+  body[data-mode="trans"] .back { background: linear-gradient(145deg, #0f766e 0%, #0e7490 100%); }
+  body[data-mode="trans"] .btn.primary { background: var(--teal); }
+  .card.is-known .front::after { content: "✔ יודע"; position: absolute; top: 14px; inset-inline-start: 16px; font-size: 12px; font-weight: 700; color: var(--green-ink); background: var(--green-soft); padding: 2px 9px; border-radius: 999px; }
+  .sort-row { display: flex; gap: 10px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+  .btn.sort-know { background: var(--green-soft); color: var(--green-ink); border-color: color-mix(in srgb, var(--green) 40%, transparent); }
+  .btn.sort-learn { background: var(--red-soft); color: var(--red-ink); border-color: color-mix(in srgb, var(--red) 40%, transparent); }
+  .known-wrap { width: 100%; max-width: 360px; margin-top: 12px; text-align: center; }
+  .known-line { font-size: 14px; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+  .progress.thin { height: 6px; margin: 0 auto; }
+  .progress.thin > div { background: var(--green); }
+  .toast { min-height: 22px; font-size: 14px; font-weight: 600; margin-top: 8px; opacity: 0; transition: opacity .25s; text-align: center; }
+  .toast.show { opacity: 1; }
+  .toast.ok { color: var(--green-ink); }
+  .toast.bad { color: var(--red-ink); }
+  .btn.accent { background: var(--accent); color: #fff; border-color: transparent; }
+  .opt.he { direction: rtl; font-size: 18px; }
+  .opt:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
+  .fb-hint { font-weight: 500; font-size: 14.5px; color: var(--muted); margin-top: 6px; }
+  .match-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 4px; }
+  .tile { min-height: 76px; border-radius: 14px; border: 2px solid var(--border); background: var(--surface-2); font-size: 16px; font-weight: 700; padding: 8px 6px; transition: transform .15s, background .2s, border-color .2s, opacity .35s; overflow-wrap: anywhere; }
+  .tile.en { font-size: 18px; }
+  .tile:hover:not(:disabled) { border-color: var(--accent); transform: translateY(-1px); }
+  .tile.selected { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+  .tile.wrong { border-color: var(--red); background: var(--red-soft); animation: shake .35s ease; }
+  .tile.matched { border-color: var(--green); background: var(--green-soft); color: var(--green-ink); opacity: .35; cursor: default; }
+  @media (max-width: 560px) {
+    .mode-row { flex-direction: column; gap: 4px; width: 100%; }
+    .modes-wrap .modes { display: grid; grid-template-columns: 1fr 1fr; width: 100%; border-radius: 20px; }
+    .modes-wrap .mode-btn { padding: 9px 6px; font-size: 13.5px; }
+    .mode-desc { font-size: 14px; padding: 7px 12px; }
+    .match-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .tile { min-height: 64px; font-size: 14px; }
+    .tile.en { font-size: 16px; }
+    .rule-text { font-size: 15px; }
+    .dir-btn { padding: 7px 12px; font-size: 13.5px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <button id="themeToggle" class="theme-toggle" aria-label="מעבר למצב כהה" title="מצב כהה / בהיר">🌙</button>
+    <h1><span class="en ltr">Irregular Verbs</span> - פעלים בלתי רגילים</h1>
+    <p class="subtitle">כרטיסיות לימוד, בחינה אמריקאית, או מבחן כתיבה עצמי</p>
+  </header>
+
+  <details id="howTo" class="howto">
+    <summary>💡 איך לומדים?</summary>
+    <ol>
+      <li><b>לומדים לפי דפוס.</b> בוחרים קטגוריה ב"🗂️ שלוש הצורות", קוראים את הכלל שבתיבה ורואים אותו בכל כרטיסייה. החלק שמשתנה מודגש בצד האחורי.</li>
+      <li><b>תרגום.</b> ב"📖 תרגום" מתרגלים רק את המשמעות: מאנגלית לעברית, או מעברית לאנגלית.</li>
+      <li><b>ממיינים.</b> אחרי כל כרטיסייה לוחצים <b>✔ אני יודע</b> או <b>✖ עדיין לומד</b>. מילים ב"עדיין לומד" נכנסות ל"⭐ מילים קשות".</li>
+      <li><b>בוחנים את עצמכם.</b> בחינה אמריקאית (צורות או תרגום), בחינת כתיבה, ומשחק התאמה נגד השעון. אפשר לבחור חלק, קטגוריה או מילים קשות.</li>
+      <li><b>חוזרים על הקשות.</b> כל טעות נשמרת. כדאי לחזור עליהן מחר.</li>
+    </ol>
+  </details>
+
+  <nav class="modes-wrap" aria-label="בחירת מצב">
+    <div class="mode-row">
+      <span class="mode-label">לימוד</span>
+      <div class="modes" role="group" aria-label="מצבי לימוד">
+        <button class="mode-btn" data-mode="cards" aria-pressed="false">🗂️ שלוש הצורות</button>
+        <button class="mode-btn" data-mode="trans" aria-pressed="false">📖 תרגום</button>
+      </div>
+    </div>
+    <div class="mode-row">
+      <span class="mode-label">תרגול</span>
+      <div class="modes" role="group" aria-label="מצבי תרגול ובחינה">
+        <button class="mode-btn" data-mode="quiz" aria-pressed="false">🎯 בחינה אמריקאית</button>
+        <button class="mode-btn" data-mode="tquiz" aria-pressed="false">🔤 בחינת תרגום</button>
+        <button class="mode-btn" data-mode="write" aria-pressed="false">✍️ בחינת כתיבה עצמית</button>
+        <button class="mode-btn" data-mode="match" aria-pressed="false">🧩 משחק התאמה</button>
+      </div>
+    </div>
+  </nav>
+  <p id="modeDesc" class="mode-desc" aria-live="polite"></p>
+
+  <div id="dirBox" class="dir-box hidden" role="group" aria-label="כיוון התרגום">
+    <button class="dir-btn" data-dir="en2he">מאנגלית לעברית</button>
+    <button class="dir-btn" data-dir="he2en">מעברית לאנגלית</button>
+  </div>
+
+  <div id="groupButtons" class="pills" role="group" aria-label="בחירת קטגוריה"></div>
+
+  <div id="partBox" class="part-box hidden">
+    <h2>על מה להיבחן?</h2>
+    <div class="parts-row">
+      <label for="partsSelect">לחלק את כל 68 המילים ל-</label>
+      <select id="partsSelect" aria-label="מספר החלקים">
+        <option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+        <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="10">10</option>
+      </select>
+      <span>חלקים</span> <span id="partsInfo" class="parts-info"></span>
+    </div>
+    <div id="partButtons" class="pills" role="group" aria-label="בחירת חלק"></div>
+    <div class="cat-label">או לפי קטגוריה (דפוס):</div>
+    <div id="catButtons" class="pills" role="group" aria-label="בחירת קטגוריה לבחינה"></div>
+  </div>
+
+  <div id="ruleBox" class="rule-box hidden" aria-live="polite"></div>
+
+  <!-- CARDS (forms + translation) -->
+  <section id="cardsSection" class="section" aria-label="כרטיסיות לימוד">
+    <div class="counter">
+      <span id="cardCounter" aria-live="polite"></span>
+      <button id="shuffleBtn" class="small-btn" aria-label="ערבב את הכרטיסיות בקבוצה">🔀 ערבב</button>
+      <button id="orderBtn" class="small-btn" aria-label="החזר לסדר המקורי">↺ סדר מקורי</button>
+    </div>
+    <div class="scene">
+      <div id="card" class="card" role="button" tabindex="0" aria-label="כרטיסייה - לחץ כדי להפוך">
+        <div class="face front">
+          <div id="frontV1" class="v1 ltr"></div>
+          <div id="frontMeaning" class="meaning"></div>
+          <div class="hint">לחץ כדי להפוך ↻</div>
+        </div>
+        <div class="face back" aria-hidden="true">
+          <div class="forms">
+            <div class="form-col"><div class="lbl">Base (V1)</div><div id="backV1" class="val"></div></div>
+            <div class="form-col"><div class="lbl">Past (V2)</div><div id="backV2" class="val"></div></div>
+            <div class="form-col"><div class="lbl">Participle (V3)</div><div id="backV3" class="val"></div></div>
+          </div>
+          <div id="backMeaning" class="meaning"></div>
+          <div id="backTrans" class="trans-big hidden"></div>
+          <div class="hint">לחץ כדי לחזור ↻</div>
+        </div>
+      </div>
+    </div>
+    <div id="cardControls" class="controls">
+      <button id="prevBtn" class="btn primary" aria-label="הכרטיסייה הקודמת">➔ הקודם</button>
+      <button id="speakBtn" class="btn green" aria-label="השמע">🔊 השמע</button>
+      <button id="nextBtn" class="btn primary" aria-label="הכרטיסייה הבאה">הבא ⬅</button>
+    </div>
+    <div class="sort-row">
+      <button id="learnBtn" class="btn sort-learn" aria-label="עדיין לומד - הוסף למילים הקשות ועבור לבאה">✖ עדיין לומד</button>
+      <button id="knowBtn" class="btn sort-know" aria-label="אני יודע - סמן כידוע ועבור לבאה">✔ אני יודע</button>
+    </div>
+    <div class="known-wrap">
+      <div class="known-line"><span id="knownStat"></span> <button id="resetKnownBtn" class="link-btn">איפוס</button></div>
+      <div id="knownProgress" class="progress thin" role="progressbar" aria-label="מילים שסימנתי כידועות" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div></div></div>
+    </div>
+    <div id="sortToast" class="toast" aria-live="polite"></div>
+    <button id="removeHardBtn" class="small-btn remove-hard hidden">✖ הסר מרשימת המילים הקשות</button>
+    <div class="kbd-hint">מקלדת: רווח / Enter להפוך • חצים לניווט (← הבא, → הקודם) • S להשמעה • K יודע • L עדיין לומד</div>
+  </section>
+
+  <!-- QUIZ (forms / translation) -->
+  <section id="quizSection" class="section" aria-label="בחינה אמריקאית">
+    <div id="quizProgress" class="progress" role="progressbar" aria-label="התקדמות בבחינה" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div></div></div>
+    <div id="quizPanel" class="panel">
+      <div id="quizScore" class="score-line"></div>
+      <div id="quizV1" class="q-v1 ltr"></div>
+      <div id="quizMeaning" class="q-meaning"></div>
+      <div id="quizPrompt" class="prompt">בחר את צורות ה-V2 וה-V3 הנכונות</div>
+      <div id="quizOptions" class="options" role="group" aria-label="תשובות אפשריות"></div>
+      <div id="quizFeedback" class="feedback" aria-live="polite"></div>
+      <div class="exam-actions">
+        <button id="quizBackBtn" class="btn" disabled>➔ חזור לשאלה הקודמת</button>
+        <button id="quizSpeakBtn" class="btn green hidden" aria-label="השמע">🔊 השמע</button>
+        <button id="quizNextBtn" class="btn accent hidden">הבא ⬅</button>
+      </div>
+    </div>
+    <div id="quizEnd" class="panel end hidden" aria-live="polite">
+      <h2>🎉 סיימת את הבחינה!</h2>
+      <div id="quizFinal" class="big-score"></div>
+      <div id="quizEndNote"></div>
+      <div class="exam-actions">
+        <button id="quizRestartBtn" class="btn accent">🔄 התחל מחדש</button>
+        <button id="quizRetryBtn" class="btn orange">🔁 תרגל רק את הטעויות</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- WRITING -->
+  <section id="writeSection" class="section" aria-label="בחינת כתיבה עצמית">
+    <div class="stats" aria-live="polite">
+      <span class="stat">✅ הצלחתי: <b id="statOk">0</b></span>
+      <span class="stat">❌ לחזור שוב: <b id="statBad">0</b></span>
+      <span class="stat">נותרו: <b id="statLeft">0</b></span>
+    </div>
+    <div id="writeProgress" class="progress" role="progressbar" aria-label="התקדמות בבחינה" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div></div></div>
+    <div id="writePanel" class="panel">
+      <div id="writeV1" class="q-v1 ltr"></div>
+      <div id="writeMeaning" class="q-meaning"></div>
+      <div class="inputs">
+        <div class="field">
+          <label for="inV2">Past (V2)</label>
+          <input id="inV2" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="צורת עבר V2">
+        </div>
+        <div class="field">
+          <label for="inV3">Participle (V3)</label>
+          <input id="inV3" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="צורת V3">
+        </div>
+      </div>
+      <div id="writeFeedback" class="feedback" aria-live="polite"></div>
+      <div class="exam-actions">
+        <button id="writeBackBtn" class="btn" disabled>➔ חזור למילה הקודמת</button>
+        <button id="checkBtn" class="btn orange">בדיקה (Enter)</button>
+        <button id="writeSpeakBtn" class="btn green hidden" aria-label="השמע את שלוש הצורות">🔊 השמע</button>
+        <button id="writeNextBtn" class="btn orange hidden">הבא (Enter) ⬅</button>
+      </div>
+    </div>
+    <div id="writeEnd" class="panel end hidden" aria-live="polite">
+      <h2>🏁 סיימת את כל המילים!</h2>
+      <div id="writeFinal" class="big-score"></div>
+      <div id="writeEndNote"></div>
+      <div class="exam-actions">
+        <button id="writeRestartBtn" class="btn orange">🔄 התחל מחדש</button>
+        <button id="writeRetryBtn" class="btn purple">🔁 תרגל רק את המילים שנכשלתי בהן</button>
+      </div>
+    </div>
+    <div class="lists">
+      <div class="list-box success"><h3>✅ הצלחתי</h3><ul id="successList"></ul></div>
+      <div class="list-box fail"><h3>❌ לחזור שוב</h3><ul id="failList"></ul></div>
+    </div>
+  </section>
+
+  <!-- MATCH GAME -->
+  <section id="matchSection" class="section" aria-label="משחק התאמה">
+    <div class="stats">
+      <span class="stat">⏱ <b id="matchTime" class="ltr">0.0</b> שנ׳</span>
+      <span class="stat">🏆 שיא: <b id="matchBest" class="ltr">—</b></span>
+      <span class="stat">זוגות שנותרו: <b id="matchLeft">0</b></span>
+    </div>
+    <div id="matchProgress" class="progress" role="progressbar" aria-label="התקדמות במשחק" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div></div></div>
+    <div id="matchPanel" class="panel">
+      <div class="prompt">התאם כל פועל באנגלית לתרגום שלו. טעות מוסיפה שנייה לזמן ⏱</div>
+      <div id="matchGrid" class="match-grid" role="group" aria-label="אריחי המשחק"></div>
+      <div id="matchMsg" class="feedback" aria-live="polite"></div>
+      <div class="exam-actions"><button id="matchShuffleBtn" class="btn">🔀 לוח חדש</button></div>
+    </div>
+    <div id="matchEnd" class="panel end hidden" aria-live="polite">
+      <h2>🧩 כל הכבוד!</h2>
+      <div id="matchResult" class="big-score"></div>
+      <div id="matchEndNote"></div>
+      <div class="exam-actions"><button id="matchAgainBtn" class="btn accent">🔄 שחק שוב</button></div>
+    </div>
+  </section>
+</div>
+<script>
+(function () {
+  'use strict';
+
+  // ---------- DATA ----------
+  const groups = [
+    { name: '1. ללא שינוי (V1=V2=V3)', short: '1 · ללא שינוי', rule: 'שלוש הצורות זהות', ex: 'cut', verbs: [
+      ['cost','cost','cost','לעלות (מחיר)'], ['cut','cut','cut','לחתוך, לגזור'], ['hit','hit','hit','להכות, לפגוע'],
+      ['hurt','hurt','hurt','לפצוע, לכאוב'], ['let','let','let','לאפשר, לתת ל-'], ['put','put','put','לשים, להניח'],
+      ['read','read','read','לקרוא'], ['set','set','set','להגדיר, לקבוע'], ['shut','shut','shut','לסגור'] ] },
+    { name: '2. דפוס ought / aught', short: '2 · ought / aught', rule: 'V2 ו-V3 זהים ומסתיימים ב-<span class="ltr">ought</span> או <span class="ltr">aught</span>', ex: 'buy', verbs: [
+      ['bring','brought','brought','להביא'], ['buy','bought','bought','לקנות'], ['catch','caught','caught','לתפוס'],
+      ['fight','fought','fought','להילחם'], ['teach','taught','taught','ללמד'], ['think','thought','thought','לחשוב'] ] },
+    { name: '3. ניגון I - A - U', short: '3 · i → a → u', rule: 'רק התנועה משתנה: <span class="ltr">i → a → u</span>', ex: 'sing', verbs: [
+      ['begin','began','begun','להתחיל'], ['drink','drank','drunk','לשתות'], ['ring','rang','rung','לצלצל'],
+      ['run','ran','run','לרוץ'], ['sing','sang','sung','לשיר'], ['swim','swam','swum','לשחות'] ] },
+    { name: '4. סיומת EN / N ב-V3', short: '4 · סיומת en / n', rule: 'ב-V3 מוסיפים סיומת <span class="ltr">en</span> או <span class="ltr">n</span>', ex: 'write', verbs: [
+      ['break','broke','broken','לשבור'], ['choose','chose','chosen','לבחור'], ['drive','drove','driven','לנהוג'],
+      ['eat','ate','eaten','לאכול'], ['fall','fell','fallen','ליפול'], ['forgive','forgave','forgiven','לסלוח'],
+      ['give','gave','given','לתת'], ['hide','hid','hidden','להחביא, להתחבא'], ['ride','rode','ridden','לרכוב'],
+      ['rise','rose','risen','לעלות, לקום'], ['see','saw','seen','לראות'], ['shake','shook','shaken','לנער, לרעוד'],
+      ['speak','spoke','spoken','לדבר'], ['steal','stole','stolen','לגנוב'], ['take','took','taken','לקחת'],
+      ['wake','woke','woken','להתעורר'], ['write','wrote','written','לכתוב'] ] },
+    { name: '5. סיומת EW ו-OWN', short: '5 · ew / own', rule: 'V2 נגמר ב-<span class="ltr">ew</span>, V3 נגמר ב-<span class="ltr">own / awn</span>', ex: 'know', verbs: [
+      ['draw','drew','drawn','לצייר'], ['fly','flew','flown','לעוף, לטוס'], ['grow','grew','grown','לגדול, לגדל'],
+      ['know','knew','known','לדעת, להכיר'], ['show','showed','shown','להראות'] ] },
+    { name: '6. עבר ו-V3 זהים (T / D)', short: '6 · t / d', rule: 'V2 ו-V3 זהים, בדרך כלל נגמרים ב-<span class="ltr">t</span> או <span class="ltr">d</span>', ex: 'keep', verbs: [
+      ['build','built','built','לבנות'], ['feel','felt','felt','להרגיש'], ['find','found','found','למצוא'],
+      ['hear','heard','heard','לשמוע'], ['keep','kept','kept','לשמור'], ['leave','left','left','לעזוב'],
+      ['lose','lost','lost','לאבד, להפסיד'], ['make','made','made','לעשות, להכין'], ['meet','met','met','לפגוש'],
+      ['pay','paid','paid','לשלם'], ['say','said','said','לומר'], ['sell','sold','sold','למכור'],
+      ['send','sent','sent','לשלוח'], ['sleep','slept','slept','לישון'], ['spend','spent','spent','להוציא כסף, לבלות'],
+      ['stand','stood','stood','לעמוד'], ['tell','told','told','לספר, לומר'], ['understand','understood','understood','להבין'],
+      ['win','won','won','לנצח'] ] },
+    { name: '7. מיוחדים ונפוצים', short: '7 · מיוחדים', rule: 'פעלים שלא מתאימים לדפוס, פשוט לשנן', ex: 'go', verbs: [
+      ['be','was / were','been','להיות'], ['come','came','come','לבוא'], ['do','did','done','לעשות'],
+      ['get','got','got / gotten','לקבל, להשיג'], ['go','went','gone','ללכת'], ['have','had','had','יש, להיות בעלים של'] ] }
+  ];
+
+  groups.forEach((g, gi) => { g.verbs = g.verbs.map(a => ({ v1: a[0], v2: a[1], v3: a[2], he: a[3], g: gi })); });
+  const allVerbs = groups.flatMap(g => g.verbs);
+  const verbByV1 = new Map(allVerbs.map(v => [v.v1, v]));
+  const PART_CHOICES = [2, 3, 4, 5, 6, 7, 8, 10];
+  const POINTS = 5; // points per correct answer in the multiple-choice quizzes
+  const MODES = ['cards', 'trans', 'quiz', 'tquiz', 'write', 'match'];
+  const STUDY = ['cards', 'trans'];
+
+  // ---------- STORAGE ----------
+  const LS_STATE = 'irregularVerbs.state.v1';
+  const LS_HARD = 'irregularVerbs.hard.v1';
+  const LS_KNOWN = 'irregularVerbs.known.v1';
+  const LS_MATCH = 'irregularVerbs.matchBest.v1';
+  const LS_HOWTO = 'irregularVerbs.howtoClosed';
+  function lsGet(key, fallback) {
+    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; }
+  }
+  function lsSet(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) { /* ignore */ } }
+
+  const saved = lsGet(LS_STATE, {}) || {};
+  const validV1 = (arr) => (Array.isArray(arr) ? arr : []).filter(v1 => verbByV1.has(v1));
+  const hardSet = new Set(validV1(lsGet(LS_HARD, [])));
+  const knownRaw = lsGet(LS_KNOWN, {}) || {};
+  const known = { forms: new Set(validV1(knownRaw.forms)), trans: new Set(validV1(knownRaw.trans)) };
+  const matchBest = lsGet(LS_MATCH, {}) || {};
+
+  const isGroupVal = (g) => Number.isInteger(g) && g >= 0 && g < groups.length;
+  const savedParts = PART_CHOICES.includes(saved.parts) ? saved.parts : 5;
+  const isPartVal = (p) => (Number.isInteger(p) && p >= 0 && p < savedParts) || p === 'all' || p === 'hard' || (typeof p === 'string' && /^g[0-6]$/.test(p));
+  const state = {
+    mode: MODES.includes(saved.mode) ? saved.mode : 'cards',
+    group: (isGroupVal(saved.group) || saved.group === 'all' || saved.group === 'hard') ? saved.group : 0,
+    part: isPartVal(saved.part) ? saved.part : 'all',
+    dir: saved.dir === 'he2en' ? 'he2en' : 'en2he',
+    parts: savedParts
+  };
+  const partSize = () => Math.ceil(allVerbs.length / state.parts);
+  if (state.group === 'hard' && hardSet.size === 0) state.group = 0;
+  if (state.part === 'hard' && hardSet.size === 0) state.part = 'all';
+
+  function saveState() { lsSet(LS_STATE, { mode: state.mode, group: state.group, part: state.part, dir: state.dir, parts: state.parts }); }
+  function saveHard() { lsSet(LS_HARD, Array.from(hardSet)); }
+  function saveKnown() { lsSet(LS_KNOWN, { forms: Array.from(known.forms), trans: Array.from(known.trans) }); }
+  function addHard(v) { if (!hardSet.has(v.v1)) { hardSet.add(v.v1); saveHard(); refreshHardUI(); } }
+  function removeHard(v1) { if (hardSet.delete(v1)) saveHard(); }
+  function hardVerbs() { return allVerbs.filter(v => hardSet.has(v.v1)); }
+
+  // ---------- HELPERS ----------
+  const $ = (id) => document.getElementById(id);
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  }
+  function norm(s) { return String(s).toLowerCase().replace(/\s+/g, ''); }
+  function alternatives(form) { return form.split('/').map(s => s.trim()).filter(Boolean); }
+  function primary(form) { return alternatives(form)[0]; }
+  function isCorrect(input, form) {
+    const n = norm(input);
+    if (!n) return false;
+    if (n === norm(form)) return true;
+    return alternatives(form).some(alt => norm(alt) === n);
+  }
+  function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+  // Hebrew meaning "tokens" – used to avoid confusing options (e.g. "לעשות" vs "לעשות, להכין")
+  function heTokens(he) { return he.split(',').map(t => t.replace(/\(.*?\)/g, '').replace(/-$/, '').trim()).filter(Boolean); }
+  function meaningsOverlap(a, b) { const ta = heTokens(a); return heTokens(b).some(t => ta.includes(t)); }
+
+  // ---- highlight the part of a form that shows the group's pattern ----
+  function markRange(s, start, end) {
+    return escapeHtml(s.slice(0, start)) + '<mark class="hl">' + escapeHtml(s.slice(start, end)) + '</mark>' + escapeHtml(s.slice(end));
+  }
+  function markRegex(s, re) { const m = s.match(re); return m ? markRange(s, m.index, m.index + m[0].length) : escapeHtml(s); }
+  function hlForm(v, key) {
+    const s = v[key];
+    switch (v.g) {
+      case 1: return key === 'v1' ? escapeHtml(s) : markRegex(s, /(ought|aught)$/);
+      case 2: {
+        const others = ['v1', 'v2', 'v3'].filter(k => k !== key).map(k => v[k]);
+        if (others.some(o => o.length !== s.length)) return escapeHtml(s);
+        let out = '';
+        for (let i = 0; i < s.length; i++) {
+          const diff = others.some(o => o[i] !== s[i]);
+          out += diff ? '<mark class="hl">' + escapeHtml(s[i]) + '</mark>' : escapeHtml(s[i]);
+        }
+        return out;
+      }
+      case 3: return key === 'v3' ? markRegex(s, /e?n$/) : escapeHtml(s);
+      case 4: return key === 'v2' ? markRegex(s, /(ew|ed)$/) : key === 'v3' ? markRegex(s, /(own|awn)$/) : escapeHtml(s);
+      case 5: return key === 'v1' ? escapeHtml(s) : markRegex(s, /[td]$/);
+      default: return escapeHtml(s);
+    }
+  }
+  function ruleHtml(gi) {
+    const g = groups[gi];
+    const ex = verbByV1.get(g.ex);
+    return '<div class="rule-title">💡 ' + escapeHtml(g.name) + '</div>' +
+      '<div class="rule-text">' + g.rule + ': <span class="rule-ex ltr">' + hlForm(ex, 'v1') + ' – ' + hlForm(ex, 'v2') + ' – ' + hlForm(ex, 'v3') + '</span></div>';
+  }
+  function showRule(gi) {
+    const box = $('ruleBox');
+    if (gi === null || gi === undefined) { box.classList.add('hidden'); box.removeAttribute('data-group'); return; }
+    if (box.getAttribute('data-group') !== String(gi)) { box.innerHTML = ruleHtml(gi); box.setAttribute('data-group', String(gi)); }
+    box.classList.remove('hidden');
+  }
+
+  // ---------- SPEECH ----------
+  let voices = [];
+  function loadVoices() { try { voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : []; } catch (e) { voices = []; } }
+  if ('speechSynthesis' in window) {
+    loadVoices();
+    try { window.speechSynthesis.addEventListener('voiceschanged', loadVoices); } catch (e) { /* ignore */ }
+  }
+  function speakText(text) {
+    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') return;
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'en-US';
+      u.rate = 0.85;
+      const voice = voices.find(x => x.lang === 'en-US') || voices.find(x => /^en/i.test(x.lang));
+      if (voice) u.voice = voice;
+      window.speechSynthesis.speak(u);
+    } catch (e) { /* ignore */ }
+  }
+  function speakVerb(v, onlyV1) {
+    if (!v) return;
+    speakText(onlyV1 ? v.v1 : [v.v1, v.v2, v.v3].map(f => f.replace(/\s*\/\s*/g, ', ')).join(', '));
+  }
+
+  // ---------- MODE / GROUP / PART UI ----------
+  const modeBtns = Array.from(document.querySelectorAll('.mode-btn'));
+  modeBtns.forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+  const isStudy = () => STUDY.includes(state.mode);
+
+  const MODE_DESC = {
+    cards: 'בצד אחד הפועל והתרגום שלו. הופכים את הכרטיסייה ורואים את שלוש הצורות (V1 / V2 / V3).',
+    trans: 'בצד אחד הפועל באנגלית, ובצד השני התרגום לעברית. לוחצים על הכרטיסייה כדי להפוך.',
+    quiz: 'רואים פועל ובוחרים את צורות ה-V2 וה-V3 הנכונות מתוך 4 תשובות.',
+    tquiz: 'רואים פועל ובוחרים את התרגום הנכון מתוך 4 תשובות.',
+    write: 'כותבים לבד את צורות ה-V2 וה-V3. מילה שטעיתם בה תחזור בסוף.',
+    match: 'מתאימים כל פועל באנגלית לתרגום שלו, מהר ככל האפשר.'
+  };
+  function setMode(mode) {
+    const prevMode = state.mode;
+    $('modeDesc').textContent = MODE_DESC[mode];
+    state.mode = mode;
+    saveState();
+    document.body.setAttribute('data-mode', mode);
+    modeBtns.forEach(b => {
+      const on = b.dataset.mode === mode;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    const study = isStudy();
+    $('groupButtons').classList.toggle('hidden', !study);
+    $('partBox').classList.toggle('hidden', study);
+    $('dirBox').classList.toggle('hidden', !(mode === 'trans' || mode === 'tquiz'));
+    renderDir();
+    $('cardsSection').classList.toggle('show', study);
+    $('quizSection').classList.toggle('show', mode === 'quiz' || mode === 'tquiz');
+    $('writeSection').classList.toggle('show', mode === 'write');
+    $('matchSection').classList.toggle('show', mode === 'match');
+    clearQuizTimer();
+    stopMatchTimer();
+    if (study) { renderGroupButtons(); selectGroup(state.group, STUDY.includes(prevMode)); }
+    else {
+      renderPartButtons();
+      updateExamRule();
+      if (mode === 'quiz' || mode === 'tquiz') startQuiz();
+      else if (mode === 'write') startWrite();
+      else startMatch();
+    }
+  }
+
+  function renderDir() {
+    document.querySelectorAll('.dir-btn').forEach(b => {
+      const on = b.dataset.dir === state.dir;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+  document.querySelectorAll('.dir-btn').forEach(b => b.addEventListener('click', () => {
+    if (state.dir === b.dataset.dir) return;
+    state.dir = b.dataset.dir;
+    saveState();
+    renderDir();
+    if (state.mode === 'trans') { setFlipped(false, true); renderCard(); }
+    else if (state.mode === 'tquiz') startQuiz();
+  }));
+
+  function knownKey() { return state.mode === 'trans' ? 'trans' : 'forms'; }
+  function knownCount(list) { const s = known[knownKey()]; return list.filter(v => s.has(v.v1)).length; }
+
+  function mkPill(wrap, label, value, active, onClick, extraClass, badge) {
+    const b = document.createElement('button');
+    b.className = 'pill' + (extraClass ? ' ' + extraClass : '');
+    b.textContent = label;
+    if (badge) {
+      const s = document.createElement('span');
+      s.className = 'badge' + (badge.done ? ' done' : '');
+      s.textContent = badge.text;
+      s.setAttribute('aria-label', 'ידוע ' + badge.text);
+      b.appendChild(s);
+    }
+    b.dataset.value = String(value);
+    b.classList.toggle('active', active);
+    b.setAttribute('aria-pressed', active ? 'true' : 'false');
+    b.addEventListener('click', onClick);
+    wrap.appendChild(b);
+    return b;
+  }
+  function mkClearHard(wrap, text) {
+    const clr = document.createElement('button');
+    clr.className = 'link-btn';
+    clr.textContent = text;
+    clr.setAttribute('aria-label', 'נקה את רשימת המילים הקשות');
+    clr.addEventListener('click', clearHard);
+    wrap.appendChild(clr);
+  }
+
+  function renderGroupButtons() {
+    const wrap = $('groupButtons');
+    wrap.innerHTML = '';
+    const badgeFor = (list) => { const k = knownCount(list); return { text: k + '/' + list.length, done: k === list.length && list.length > 0 }; };
+    groups.forEach((g, i) => mkPill(wrap, g.name, i, state.group === i, () => selectGroup(i), '', badgeFor(g.verbs)));
+    mkPill(wrap, '📚 כל הקבוצות', 'all', state.group === 'all', () => selectGroup('all'), '', badgeFor(allVerbs));
+    if (hardSet.size > 0) {
+      mkPill(wrap, '⭐ מילים קשות (' + hardSet.size + ')', 'hard', state.group === 'hard', () => selectGroup('hard'), 'hard');
+      mkClearHard(wrap, 'נקה רשימת מילים קשות');
+    }
+  }
+
+  function renderPartButtons() {
+    const wrap = $('partButtons');
+    wrap.innerHTML = '';
+    mkPill(wrap, 'כל המילים', 'all', state.part === 'all', () => selectPart('all'));
+    for (let i = 0; i < state.parts; i++) {
+      const from = i * partSize() + 1, to = Math.min((i + 1) * partSize(), allVerbs.length);
+      const b = mkPill(wrap, 'חלק ' + (i + 1), i, state.part === i, () => selectPart(i));
+      b.title = 'מילים ' + from + '–' + to;
+      b.setAttribute('aria-label', 'חלק ' + (i + 1) + ': מילים ' + from + ' עד ' + to);
+    }
+    const sel = $('partsSelect');
+    sel.value = String(state.parts);
+    const sizes = [];
+    for (let i = 0; i < state.parts; i++) sizes.push(partVerbs(i).length);
+    const last = sizes[sizes.length - 1], first = sizes[0];
+    $('partsInfo').textContent = '(' + first + ' מילים בכל חלק' + (last !== first ? ', באחרון ' + last : '') + ')';
+    if (hardSet.size > 0) {
+      mkPill(wrap, '⭐ מילים קשות (' + hardSet.size + ')', 'hard', state.part === 'hard', () => selectPart('hard'), 'hard');
+      mkClearHard(wrap, 'נקה רשימה');
+    }
+    const cw = $('catButtons');
+    cw.innerHTML = '';
+    groups.forEach((g, i) => mkPill(cw, g.short, 'g' + i, state.part === 'g' + i, () => selectPart('g' + i)));
+  }
+
+  function clearHard() {
+    if (!window.confirm('למחוק את כל רשימת המילים הקשות?')) return;
+    hardSet.clear();
+    saveHard();
+    if (state.group === 'hard') state.group = 0;
+    if (state.part === 'hard') state.part = 'all';
+    saveState();
+    setMode(state.mode);
+  }
+
+  // A word was added to the difficult list: update buttons without restarting anything.
+  function refreshHardUI() { if (isStudy()) renderGroupButtons(); else renderPartButtons(); }
+
+  function partVerbs(part) {
+    if (part === 'hard') return hardVerbs();
+    if (part === 'all') return allVerbs.slice();
+    if (typeof part === 'string' && part[0] === 'g') return groups[Number(part.slice(1))].verbs.slice();
+    return allVerbs.slice(part * partSize(), (part + 1) * partSize());
+  }
+  function updateExamRule() {
+    showRule(typeof state.part === 'string' && state.part[0] === 'g' ? Number(state.part.slice(1)) : null);
+  }
+
+  $('partsSelect').addEventListener('change', (e) => {
+    const n = Number(e.target.value);
+    if (!PART_CHOICES.includes(n)) return;
+    state.parts = n;
+    if (Number.isInteger(state.part)) state.part = 0; // numbering changed: start from part 1
+    saveState();
+    selectPart(state.part);
+  });
+
+  function selectPart(value) {
+    if (value === 'hard' && hardSet.size === 0) value = 'all';
+    state.part = value;
+    saveState();
+    renderPartButtons();
+    updateExamRule();
+    if (state.mode === 'quiz' || state.mode === 'tquiz') startQuiz();
+    else if (state.mode === 'write') startWrite();
+    else if (state.mode === 'match') startMatch();
+  }
+
+  // ---------- CARDS (forms + translation) ----------
+  const cards = { list: [], index: 0, flipped: false, shuffled: false };
+  const cardEl = $('card');
+
+  function groupVerbs(value) {
+    if (value === 'all') return allVerbs.slice();
+    if (value === 'hard') return hardVerbs();
+    return groups[value].verbs.slice();
+  }
+
+  function selectGroup(idx, keepIndex) {
+    if (idx === 'hard' && hardSet.size === 0) idx = 0;
+    const changed = state.group !== idx;
+    state.group = idx;
+    saveState();
+    renderGroupButtons();
+    const prevV1 = keepIndex && !changed && cards.list[cards.index] ? cards.list[cards.index].v1 : null;
+    const prevOrder = keepIndex && !changed && cards.shuffled ? cards.list.slice() : null;
+    cards.list = prevOrder || groupVerbs(idx);
+    cards.shuffled = !!prevOrder;
+    cards.index = 0;
+    if (prevV1) { const i = cards.list.findIndex(v => v.v1 === prevV1); if (i >= 0) cards.index = i; }
+    setFlipped(false, true);
+    renderCard();
+  }
+
+  function setFlipped(flip, instant) {
+    cards.flipped = flip;
+    if (instant) {
+      cardEl.style.transition = 'none';
+      cardEl.classList.toggle('flipped', flip);
+      void cardEl.offsetWidth; // force reflow
+      cardEl.style.transition = '';
+    } else {
+      cardEl.classList.toggle('flipped', flip);
+    }
+    cardEl.querySelector('.front').setAttribute('aria-hidden', flip ? 'true' : 'false');
+    cardEl.querySelector('.back').setAttribute('aria-hidden', flip ? 'false' : 'true');
+  }
+
+  function renderCard() {
+    const n = cards.list.length;
+    const v = cards.list[cards.index];
+    const trans = state.mode === 'trans';
+    const he2en = trans && state.dir === 'he2en';
+    $('cardCounter').textContent = n ? 'כרטיסייה ' + (cards.index + 1) + ' מתוך ' + n : 'אין מילים בקבוצה זו';
+    const front = $('frontV1');
+    front.textContent = v ? (he2en ? v.he : v.v1) : '';
+    front.classList.toggle('ltr', !he2en);
+    front.classList.toggle('he-big', he2en);
+    front.setAttribute('dir', he2en ? 'rtl' : 'ltr');
+    $('frontMeaning').textContent = v ? v.he : '';
+    $('frontMeaning').classList.toggle('hidden', trans);
+    // back
+    cardEl.querySelector('.forms').classList.toggle('hidden', trans);
+    $('backMeaning').classList.toggle('hidden', trans);
+    $('backTrans').classList.toggle('hidden', !trans);
+    if (v) {
+      $('backV1').innerHTML = hlForm(v, 'v1');
+      $('backV2').innerHTML = hlForm(v, 'v2');
+      $('backV3').innerHTML = hlForm(v, 'v3');
+      $('backMeaning').textContent = v.he;
+      const bt = $('backTrans');
+      bt.textContent = he2en ? v.v1 : v.he;
+      bt.setAttribute('dir', he2en ? 'ltr' : 'rtl');
+      cardEl.querySelector('.forms').classList.toggle('long', Math.max(v.v1.length, v.v2.length, v.v3.length) > 7);
+    } else {
+      ['backV1', 'backV2', 'backV3', 'backMeaning', 'backTrans'].forEach(id => { $(id).textContent = ''; });
+    }
+    $('prevBtn').disabled = n <= 1;
+    $('nextBtn').disabled = n <= 1;
+    $('speakBtn').disabled = !v;
+    $('speakBtn').setAttribute('aria-label', trans ? 'השמע את הפועל באנגלית' : 'השמע את שלוש הצורות');
+    $('knowBtn').disabled = !v;
+    $('learnBtn').disabled = !v;
+    $('shuffleBtn').disabled = n <= 1;
+    $('orderBtn').classList.toggle('hidden', !cards.shuffled);
+    $('removeHardBtn').classList.toggle('hidden', !(state.group === 'hard' && v));
+    showRule(v ? v.g : (Number.isInteger(state.group) ? state.group : null));
+    // known status
+    const list = groupVerbs(state.group);
+    const k = knownCount(list);
+    $('knownStat').textContent = '✔ יודע: ' + k + '/' + list.length + (trans ? ' (תרגום)' : ' (שלוש הצורות)');
+    const pct = list.length ? Math.round(k / list.length * 100) : 0;
+    $('knownProgress').firstElementChild.style.width = pct + '%';
+    $('knownProgress').setAttribute('aria-valuenow', String(pct));
+    const isKnown = v && known[knownKey()].has(v.v1);
+    cardEl.classList.toggle('is-known', !!isKnown);
+    let label = 'אין כרטיסייה';
+    if (v) {
+      if (trans) label = 'כרטיסיית תרגום: ' + (cards.flipped ? (he2en ? v.v1 : v.he) : (he2en ? v.he : v.v1)) + '. לחץ כדי להפוך';
+      else label = 'כרטיסייה: ' + v.v1 + ' - ' + v.he + '. ' + (cards.flipped ? 'צורות: ' + v.v1 + ', ' + v.v2 + ', ' + v.v3 + '. לחץ כדי לחזור' : 'לחץ כדי להפוך');
+    }
+    cardEl.setAttribute('aria-label', label);
+  }
+
+  function flipCard() { if (!cards.list.length) return; setFlipped(!cards.flipped); renderCard(); }
+  function goCard(delta) {
+    const n = cards.list.length;
+    if (n <= 1) return;
+    cards.index = (cards.index + delta + n) % n;
+    setFlipped(false, true);
+    renderCard();
+  }
+  let toastTimer = null;
+  function toast(msg, cls) {
+    const t = $('sortToast');
+    t.textContent = msg;
+    t.className = 'toast show ' + (cls || '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.className = 'toast'; }, 1400);
+  }
+  function markCard(knows) {
+    const v = cards.list[cards.index];
+    if (!v) return;
+    const set = known[knownKey()];
+    if (knows) { set.add(v.v1); toast('✔ ' + v.v1 + ' סומן כידוע', 'ok'); }
+    else { set.delete(v.v1); addHard(v); toast('✖ ' + v.v1 + ' נוסף למילים הקשות', 'bad'); }
+    saveKnown();
+    renderGroupButtons();
+    const list = groupVerbs(state.group);
+    if (knows && list.length && knownCount(list) === list.length) toast('🎉 סימנת את כל המילים בקבוצה כידועות!', 'ok');
+    if (cards.list.length > 1) goCard(1); else renderCard();
+  }
+
+  cardEl.addEventListener('click', flipCard);
+  $('prevBtn').addEventListener('click', (e) => { e.stopPropagation(); goCard(-1); });
+  $('nextBtn').addEventListener('click', (e) => { e.stopPropagation(); goCard(1); });
+  $('speakBtn').addEventListener('click', (e) => { e.stopPropagation(); speakVerb(cards.list[cards.index], state.mode === 'trans'); });
+  $('knowBtn').addEventListener('click', () => markCard(true));
+  $('learnBtn').addEventListener('click', () => markCard(false));
+  $('resetKnownBtn').addEventListener('click', () => {
+    if (!window.confirm('לאפס את סימוני "אני יודע" במצב הזה?')) return;
+    known[knownKey()].clear(); saveKnown(); renderGroupButtons(); renderCard();
+  });
+  $('shuffleBtn').addEventListener('click', () => {
+    cards.list = shuffle(cards.list); cards.index = 0; cards.shuffled = true; setFlipped(false, true); renderCard();
+  });
+  $('orderBtn').addEventListener('click', () => {
+    cards.list = groupVerbs(state.group); cards.index = 0; cards.shuffled = false; setFlipped(false, true); renderCard();
+  });
+  $('removeHardBtn').addEventListener('click', () => {
+    const v = cards.list[cards.index];
+    if (!v) return;
+    removeHard(v.v1);
+    if (hardSet.size === 0) { selectGroup(0); return; }
+    cards.list.splice(cards.index, 1);
+    if (cards.index >= cards.list.length) cards.index = 0;
+    renderGroupButtons();
+    setFlipped(false, true);
+    renderCard();
+  });
+
+  // ---------- QUIZ (forms / translation) ----------
+  const quiz = { pool: [], pos: 0, score: 0, wrong: new Set(), timer: null, total: 0, kind: 'forms', dir: 'en2he' };
+
+  function regularize(base) {
+    if (/e$/.test(base)) return base + 'd';
+    if (/[^aeiou]y$/.test(base)) return base.slice(0, -1) + 'ied';
+    return base + 'ed';
+  }
+  function optionText(v2, v3) { return v2 + ' – ' + v3; }
+
+  function buildFormOptions(v) {
+    const correct = optionText(v.v2, v.v3);
+    const p2 = primary(v.v2), p3 = primary(v.v3);
+    const reg = regularize(v.v1);
+    const fakes = [
+      optionText(reg, reg), optionText(p2, p2), optionText(p3, p3), optionText(p2, reg),
+      optionText(reg, p3), optionText(v.v1, v.v1), optionText(p3, p2), optionText(v.v1, p3), optionText(p2, v.v1)
+    ];
+    const others = shuffle(allVerbs.filter(o => o !== v)).slice(0, 6).map(o => optionText(o.v2, o.v3));
+    const sameGroup = shuffle(groups[v.g].verbs.filter(o => o !== v)).slice(0, 2).map(o => optionText(o.v2, o.v3));
+    const seen = new Set([norm(correct)]);
+    const pick = [];
+    const tryAdd = (t) => { const k = norm(t); if (!seen.has(k) && pick.length < 3) { seen.add(k); pick.push(t); } };
+    shuffle(fakes).slice(0, 4).forEach(t => { if (pick.length < 2) tryAdd(t); });
+    shuffle(sameGroup.concat(others.slice(0, 2))).forEach(tryAdd);
+    shuffle(fakes).forEach(tryAdd);
+    others.forEach(tryAdd);
+    allVerbs.forEach(o => tryAdd(optionText(o.v2, o.v3)));
+    return shuffle([correct].concat(pick)).map(t => ({ text: t, correct: t === correct, he: false }));
+  }
+
+  function buildTransOptions(v, dir) {
+    const toHe = dir === 'en2he';
+    // distractors: prefer same group (more challenging), never with overlapping meanings
+    const candidates = shuffle(groups[v.g].verbs).concat(shuffle(allVerbs))
+      .filter(o => o !== v && !meaningsOverlap(o.he, v.he));
+    const pick = [];
+    const seen = new Set([toHe ? v.he : v.v1]);
+    const sameGroupMax = 1 + Math.floor(Math.random() * 2);
+    let fromGroup = 0;
+    for (const o of candidates) {
+      if (pick.length >= 3) break;
+      const t = toHe ? o.he : o.v1;
+      if (seen.has(t) || pick.some(p => meaningsOverlap(p.he, o.he))) continue;
+      if (o.g === v.g) { if (fromGroup >= sameGroupMax) continue; fromGroup++; }
+      seen.add(t); pick.push(o);
+    }
+    return shuffle([v].concat(pick)).map(o => ({ text: toHe ? o.he : o.v1, correct: o === v, he: toHe }));
+  }
+
+  function clearQuizTimer() { if (quiz.timer) { clearTimeout(quiz.timer); quiz.timer = null; } }
+
+  function startQuiz(verbs) {
+    clearQuizTimer();
+    quiz.kind = state.mode === 'tquiz' ? 'trans' : 'forms';
+    quiz.dir = state.dir;
+    const base = verbs || partVerbs(state.part);
+    quiz.pool = shuffle(base).map(v => ({ verb: v, options: quiz.kind === 'trans' ? buildTransOptions(v, quiz.dir) : buildFormOptions(v), chosen: null }));
+    quiz.pos = 0; quiz.score = 0; quiz.wrong = new Set(); quiz.total = quiz.pool.length;
+    $('quizPanel').classList.remove('hidden');
+    $('quizEnd').classList.add('hidden');
+    $('quizSection').setAttribute('aria-label', quiz.kind === 'trans' ? 'בחינת תרגום' : 'בחינה אמריקאית');
+    renderQuiz();
+  }
+
+  function updateQuizProgress() {
+    const answered = quiz.pool.filter(q => q.chosen !== null).length;
+    const pct = quiz.total ? Math.round(answered / quiz.total * 100) : 0;
+    $('quizProgress').firstElementChild.style.width = pct + '%';
+    $('quizProgress').setAttribute('aria-valuenow', String(pct));
+  }
+  function scoreText() { return 'ציון: ' + (quiz.score * POINTS) + ' נק׳ | שאלה ' + (quiz.pos + 1) + ' מתוך ' + quiz.pool.length; }
+
+  function renderQuiz() {
+    updateQuizProgress();
+    if (!quiz.pool.length) {
+      $('quizScore').textContent = '';
+      $('quizV1').textContent = '';
+      $('quizMeaning').textContent = 'אין מילים בחלק זה';
+      $('quizOptions').innerHTML = '';
+      $('quizFeedback').textContent = '';
+      $('quizBackBtn').disabled = true;
+      return;
+    }
+    const q = quiz.pool[quiz.pos];
+    const big = $('quizV1');
+    $('quizScore').textContent = scoreText();
+    if (quiz.kind === 'trans' && quiz.dir === 'he2en') {
+      big.textContent = q.verb.he; big.classList.remove('ltr'); big.setAttribute('dir', 'rtl');
+      $('quizMeaning').textContent = '';
+      $('quizPrompt').textContent = 'בחר את הפועל באנגלית';
+    } else {
+      big.textContent = q.verb.v1; big.classList.add('ltr'); big.setAttribute('dir', 'ltr');
+      $('quizMeaning').textContent = quiz.kind === 'trans' ? '' : q.verb.he;
+      $('quizPrompt').textContent = quiz.kind === 'trans' ? 'מה התרגום לעברית?' : 'בחר את צורות ה-V2 וה-V3 הנכונות';
+    }
+    $('quizMeaning').classList.toggle('hidden', !$('quizMeaning').textContent);
+    $('quizFeedback').textContent = '';
+    $('quizFeedback').className = 'feedback';
+    $('quizBackBtn').disabled = quiz.pos === 0;
+    $('quizSpeakBtn').classList.add('hidden');
+    $('quizNextBtn').classList.add('hidden');
+    const wrap = $('quizOptions');
+    wrap.innerHTML = '';
+    q.options.forEach((o, i) => {
+      const b = document.createElement('button');
+      b.className = 'opt' + (o.he ? ' he' : '');
+      b.textContent = o.text;
+      b.dataset.correct = o.correct ? '1' : '0';
+      b.setAttribute('aria-label', 'תשובה ' + (i + 1) + ': ' + o.text);
+      b.addEventListener('click', () => answerQuiz(i));
+      wrap.appendChild(b);
+    });
+  }
+
+  function answerQuiz(i) {
+    const q = quiz.pool[quiz.pos];
+    if (!q || q.chosen !== null) return;
+    q.chosen = i;
+    const ok = q.options[i].correct;
+    if (ok) quiz.score++; else { quiz.wrong.add(q.verb.v1); addHard(q.verb); }
+    Array.from($('quizOptions').children).forEach((b, j) => {
+      b.disabled = true;
+      if (q.options[j].correct) b.classList.add('correct');
+      else if (j === i) b.classList.add('wrong');
+      else b.classList.add('dim');
+    });
+    const fb = $('quizFeedback');
+    const v = q.verb;
+    const correctHtml = quiz.kind === 'trans'
+      ? '<span class="answer">' + escapeHtml(v.v1) + '</span> = ' + escapeHtml(v.he)
+      : '<span class="answer">' + escapeHtml(optionText(v.v2, v.v3)) + '</span>';
+    if (ok) { fb.innerHTML = '✅ נכון מאוד! <span class="plus">+' + POINTS + ' נק׳</span>'; fb.className = 'feedback ok'; }
+    else {
+      fb.innerHTML = '❌ טעות. התשובה הנכונה: ' + correctHtml +
+        (quiz.kind === 'forms' ? '<div class="fb-hint">💡 ' + groups[v.g].rule + '</div>' : '');
+      fb.className = 'feedback bad';
+    }
+    $('quizScore').textContent = scoreText();
+    $('quizSpeakBtn').classList.remove('hidden');
+    $('quizNextBtn').classList.remove('hidden');
+    updateQuizProgress();
+    clearQuizTimer();
+    quiz.timer = setTimeout(nextQuiz, ok ? 1200 : 2600);
+  }
+
+  function nextQuiz() {
+    clearQuizTimer();
+    if (quiz.pos < quiz.pool.length - 1) {
+      quiz.pos++; renderQuiz();
+      const first = $('quizOptions').firstElementChild;
+      if (first) first.focus({ preventScroll: true });
+    } else endQuiz();
+  }
+
+  function endQuiz() {
+    clearQuizTimer();
+    updateQuizProgress();
+    $('quizPanel').classList.add('hidden');
+    $('quizEnd').classList.remove('hidden');
+    const pct = quiz.total ? Math.round(quiz.score / quiz.total * 100) : 0;
+    $('quizFinal').textContent = (quiz.score * POINTS) + ' / ' + (quiz.total * POINTS) + ' נק׳ (' + pct + '%)';
+    const wrongList = Array.from(quiz.wrong);
+    $('quizEndNote').innerHTML = '<div class="end-sub">' + quiz.score + ' תשובות נכונות מתוך ' + quiz.total + ' (' + POINTS + ' נק׳ לכל תשובה נכונה)</div>' + (wrongList.length
+      ? 'מילים לחזרה: <span class="ltr">' + escapeHtml(wrongList.join(', ')) + '</span>'
+      : 'כל הכבוד! לא הייתה אף טעות 🌟');
+    $('quizRetryBtn').classList.toggle('hidden', wrongList.length === 0);
+    $('quizRestartBtn').focus({ preventScroll: true });
+  }
+
+  function quizBack() {
+    if (quiz.pos === 0) return;
+    clearQuizTimer();
+    const undo = (q) => {
+      if (q.chosen === null) return;
+      if (q.options[q.chosen].correct) quiz.score--;
+      else quiz.wrong.delete(q.verb.v1);
+      q.chosen = null;
+    };
+    undo(quiz.pool[quiz.pos]);
+    quiz.pos--;
+    undo(quiz.pool[quiz.pos]);
+    renderQuiz();
+  }
+
+  $('quizBackBtn').addEventListener('click', quizBack);
+  $('quizNextBtn').addEventListener('click', nextQuiz);
+  $('quizSpeakBtn').addEventListener('click', () => {
+    clearQuizTimer(); // let the learner listen; continue with "הבא"
+    const q = quiz.pool[quiz.pos];
+    if (q) speakVerb(q.verb, quiz.kind === 'trans');
+  });
+  $('quizRestartBtn').addEventListener('click', () => startQuiz());
+  $('quizRetryBtn').addEventListener('click', () => startQuiz(allVerbs.filter(v => quiz.wrong.has(v.v1))));
+
+  // ---------- WRITING EXAM ----------
+  const write = { queue: [], current: null, checked: false, success: [], fail: [], history: [], total: 0, failSet: new Set() };
+  const inV2 = $('inV2'), inV3 = $('inV3');
+
+  function startWrite(verbs) {
+    const base = verbs || partVerbs(state.part);
+    write.queue = shuffle(base);
+    write.total = write.queue.length;
+    write.success = []; write.fail = []; write.history = []; write.failSet = new Set();
+    write.current = null; write.checked = false;
+    $('writePanel').classList.remove('hidden');
+    $('writeEnd').classList.add('hidden');
+    nextWrite(true);
+  }
+
+  function updateWriteStats() {
+    $('statOk').textContent = String(write.success.length);
+    $('statBad').textContent = String(write.failSet.size);
+    $('statLeft').textContent = String(write.queue.length + (write.current && !write.checked ? 1 : 0));
+    const pct = write.total ? Math.round(write.success.length / write.total * 100) : 0;
+    $('writeProgress').firstElementChild.style.width = pct + '%';
+    $('writeProgress').setAttribute('aria-valuenow', String(pct));
+    const li = (v) => '<li>' + escapeHtml(v.v1 + ' – ' + v.v2 + ' – ' + v.v3) + '</li>';
+    $('successList').innerHTML = write.success.length ? write.success.map(li).join('') : '<li class="empty-note">עדיין אין</li>';
+    const fails = allVerbs.filter(v => write.failSet.has(v.v1));
+    $('failList').innerHTML = fails.length ? fails.map(li).join('') : '<li class="empty-note">עדיין אין</li>';
+  }
+
+  function showWriteVerb() {
+    const v = write.current;
+    $('writeV1').textContent = v ? v.v1 : '';
+    $('writeMeaning').textContent = v ? v.he : 'אין מילים בחלק זה';
+    inV2.value = ''; inV3.value = '';
+    inV2.className = ''; inV3.className = '';
+    inV2.readOnly = false; inV3.readOnly = false;
+    inV2.disabled = !v; inV3.disabled = !v;
+    $('writeFeedback').textContent = '';
+    $('writeFeedback').className = 'feedback';
+    $('checkBtn').classList.toggle('hidden', !v);
+    $('writeSpeakBtn').classList.add('hidden');
+    $('writeNextBtn').classList.add('hidden');
+    $('writeBackBtn').disabled = write.history.length === 0;
+    write.checked = false;
+    updateWriteStats();
+    if (v) inV2.focus({ preventScroll: true });
+  }
+
+  function nextWrite(initial) {
+    if (!write.queue.length) {
+      write.current = null;
+      if (initial || write.total === 0) { showWriteVerb(); return; }
+      endWrite();
+      return;
+    }
+    write.current = write.queue.shift();
+    showWriteVerb();
+  }
+
+  function checkWrite() {
+    const v = write.current;
+    if (!v || write.checked) return;
+    const ok2 = isCorrect(inV2.value, v.v2);
+    const ok3 = isCorrect(inV3.value, v.v3);
+    const ok = ok2 && ok3;
+    write.checked = true;
+    inV2.classList.add(ok2 ? 'ok' : 'bad');
+    inV3.classList.add(ok3 ? 'ok' : 'bad');
+    inV2.readOnly = true; inV3.readOnly = true;
+    let requeued = false;
+    if (ok) {
+      write.success.push(v);
+    } else {
+      write.fail.push(v);
+      write.failSet.add(v.v1);
+      write.queue.push(v);  // re-queue at the end
+      requeued = true;
+      addHard(v);
+    }
+    write.history.push({ verb: v, ok: ok, requeued: requeued });
+    const fb = $('writeFeedback');
+    const ans = '<span class="answer">' + hlForm(v, 'v1') + ' – ' + hlForm(v, 'v2') + ' – ' + hlForm(v, 'v3') + '</span>';
+    if (ok) { fb.innerHTML = '✅ מצוין! ' + ans; fb.className = 'feedback ok'; }
+    else { fb.innerHTML = '❌ לא מדויק. התשובה הנכונה: ' + ans + '<div class="fb-hint">💡 ' + groups[v.g].rule + '</div>'; fb.className = 'feedback bad'; }
+    $('checkBtn').classList.add('hidden');
+    $('writeSpeakBtn').classList.remove('hidden');
+    $('writeNextBtn').classList.remove('hidden');
+    $('writeBackBtn').disabled = false;
+    updateWriteStats();
+    $('writeNextBtn').focus({ preventScroll: true }); // Enter now moves on
+  }
+
+  function writeBack() {
+    if (!write.history.length) return;
+    if (write.current && !write.checked) write.queue.unshift(write.current);
+    const h = write.history.pop();
+    if (h.requeued) {
+      const idx = write.queue.lastIndexOf(h.verb);
+      if (idx >= 0) write.queue.splice(idx, 1);
+    }
+    if (h.ok) {
+      const i = write.success.lastIndexOf(h.verb);
+      if (i >= 0) write.success.splice(i, 1);
+    } else {
+      const i = write.fail.lastIndexOf(h.verb);
+      if (i >= 0) write.fail.splice(i, 1);
+      if (!write.fail.includes(h.verb)) write.failSet.delete(h.verb.v1);
+    }
+    write.current = h.verb;
+    $('writePanel').classList.remove('hidden');
+    $('writeEnd').classList.add('hidden');
+    showWriteVerb();
+  }
+
+  function endWrite() {
+    write.current = null;
+    updateWriteStats();
+    $('writePanel').classList.add('hidden');
+    $('writeEnd').classList.remove('hidden');
+    const firstTry = write.success.filter(v => !write.failSet.has(v.v1)).length;
+    $('writeFinal').textContent = firstTry + ' / ' + write.total;
+    $('writeEndNote').textContent = write.failSet.size
+      ? 'הצלחת בניסיון הראשון ב-' + firstTry + ' מילים. ' + write.failSet.size + ' מילים דרשו חזרה (נוספו לרשימת המילים הקשות).'
+      : 'מושלם! כל המילים נכונות בניסיון הראשון 🌟';
+    $('writeRetryBtn').classList.toggle('hidden', write.failSet.size === 0);
+    $('writeRestartBtn').focus({ preventScroll: true });
+  }
+
+  $('checkBtn').addEventListener('click', checkWrite);
+  $('writeNextBtn').addEventListener('click', () => nextWrite(false));
+  $('writeBackBtn').addEventListener('click', writeBack);
+  $('writeSpeakBtn').addEventListener('click', () => { const h = write.history[write.history.length - 1]; if (h) speakVerb(h.verb); });
+  $('writeRestartBtn').addEventListener('click', () => startWrite());
+  $('writeRetryBtn').addEventListener('click', () => { const f = new Set(write.failSet); startWrite(allVerbs.filter(v => f.has(v.v1))); });
+  [inV2, inV3].forEach(inp => inp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (write.checked) nextWrite(false); else checkWrite();
+    }
+  }));
+
+  // ---------- MATCH GAME ----------
+  const MATCH_PAIRS = 6;
+  const match = { tiles: [], sel: null, left: 0, pairs: 0, start: 0, penalty: 0, interval: null, done: false, busy: false };
+
+  function stopMatchTimer() { if (match.interval) { clearInterval(match.interval); match.interval = null; } }
+  function matchElapsed() { return match.start ? (Date.now() - match.start + match.penalty) : match.penalty; }
+  function fmtSec(ms) { return (ms / 1000).toFixed(1); }
+  function matchKey() { return Number.isInteger(state.part) ? state.parts + ':' + state.part : String(state.part); }
+  function renderMatchStats() {
+    $('matchTime').textContent = fmtSec(matchElapsed());
+    const best = matchBest[matchKey()];
+    $('matchBest').textContent = best ? fmtSec(best) + ' שנ׳' : '—';
+    $('matchLeft').textContent = String(match.left);
+    const pct = match.pairs ? Math.round((match.pairs - match.left) / match.pairs * 100) : 0;
+    $('matchProgress').firstElementChild.style.width = pct + '%';
+    $('matchProgress').setAttribute('aria-valuenow', String(pct));
+  }
+
+  function startMatch() {
+    stopMatchTimer();
+    const chosen = [];
+    for (const v of shuffle(partVerbs(state.part))) {
+      if (chosen.length >= MATCH_PAIRS) break;
+      if (chosen.some(c => meaningsOverlap(c.he, v.he))) continue; // keep every board unambiguous
+      chosen.push(v);
+    }
+    match.tiles = shuffle(chosen.flatMap(v => [{ v: v, side: 'en' }, { v: v, side: 'he' }]));
+    match.sel = null; match.pairs = chosen.length; match.left = chosen.length;
+    match.start = 0; match.penalty = 0; match.done = false; match.busy = false;
+    $('matchPanel').classList.remove('hidden');
+    $('matchEnd').classList.add('hidden');
+    $('matchMsg').textContent = '';
+    $('matchMsg').className = 'feedback';
+    const grid = $('matchGrid');
+    grid.innerHTML = '';
+    if (chosen.length < 2) {
+      $('matchMsg').textContent = 'צריך לפחות 2 מילים למשחק. בחר חלק או קטגוריה אחרת.';
+    }
+    match.tiles.forEach((t, i) => {
+      const b = document.createElement('button');
+      b.className = 'tile ' + t.side;
+      b.textContent = t.side === 'en' ? t.v.v1 : t.v.he;
+      b.setAttribute('dir', t.side === 'en' ? 'ltr' : 'rtl');
+      b.dataset.v1 = t.v.v1;
+      b.dataset.side = t.side;
+      b.setAttribute('aria-pressed', 'false');
+      b.addEventListener('click', () => clickTile(i, b));
+      t.el = b;
+      grid.appendChild(b);
+    });
+    renderMatchStats();
+  }
+
+  function clickTile(i, el) {
+    const t = match.tiles[i];
+    if (match.done || match.busy || t.matched || match.pairs < 2) return;
+    if (!match.start) {
+      match.start = Date.now();
+      match.interval = setInterval(renderMatchStats, 100);
+    }
+    if (!match.sel) { match.sel = t; el.classList.add('selected'); el.setAttribute('aria-pressed', 'true'); return; }
+    if (match.sel === t) { el.classList.remove('selected'); el.setAttribute('aria-pressed', 'false'); match.sel = null; return; }
+    if (match.sel.side === t.side) {
+      match.sel.el.classList.remove('selected'); match.sel.el.setAttribute('aria-pressed', 'false');
+      match.sel = t; el.classList.add('selected'); el.setAttribute('aria-pressed', 'true');
+      return;
+    }
+    const a = match.sel, b = t;
+    match.sel = null;
+    a.el.classList.remove('selected'); a.el.setAttribute('aria-pressed', 'false');
+    if (a.v === b.v) {
+      a.matched = b.matched = true;
+      [a.el, b.el].forEach(x => { x.classList.add('matched'); x.disabled = true; });
+      match.left--;
+      $('matchMsg').textContent = '✅ ' + a.v.v1 + ' = ' + a.v.he;
+      $('matchMsg').className = 'feedback ok';
+      renderMatchStats();
+      if (match.left === 0) finishMatch();
+    } else {
+      match.penalty += 1000;
+      match.busy = true;
+      [a.el, b.el].forEach(x => x.classList.add('wrong'));
+      $('matchMsg').textContent = '❌ לא מתאים (+1 שנ׳)';
+      $('matchMsg').className = 'feedback bad';
+      setTimeout(() => { [a.el, b.el].forEach(x => x.classList.remove('wrong')); match.busy = false; }, 450);
+      renderMatchStats();
+    }
+  }
+
+  function finishMatch() {
+    match.done = true;
+    const total = matchElapsed();
+    stopMatchTimer();
+    const key = matchKey();
+    const prev = matchBest[key];
+    const isBest = !prev || total < prev;
+    if (isBest) { matchBest[key] = total; lsSet(LS_MATCH, matchBest); }
+    renderMatchStats();
+    setTimeout(() => {
+      if (state.mode !== 'match' || !match.done) return;
+      $('matchPanel').classList.add('hidden');
+      $('matchEnd').classList.remove('hidden');
+      $('matchResult').textContent = fmtSec(total) + ' שניות';
+      $('matchEndNote').textContent = isBest ? (prev ? '🏆 שיא חדש! השיא הקודם: ' + fmtSec(prev) + ' שנ׳' : '🏆 זה השיא הראשון שלך בחלק הזה!') : 'השיא שלך: ' + fmtSec(prev) + ' שנ׳. נסה לשבור אותו!';
+      $('matchAgainBtn').focus({ preventScroll: true });
+    }, 450);
+  }
+  $('matchShuffleBtn').addEventListener('click', startMatch);
+  $('matchAgainBtn').addEventListener('click', startMatch);
+
+  // ---------- GLOBAL KEYBOARD ----------
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const t = e.target;
+    const tag = t && t.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (isStudy()) {
+      const inCardControls = t && t.closest && (t.closest('#cardControls') || t.closest('.sort-row') || t === cardEl);
+      if (e.key === ' ' || e.key === 'Enter') {
+        if (tag === 'BUTTON' && !inCardControls) return; // let other buttons work natively
+        e.preventDefault(); flipCard();
+      } else if (e.key === 'ArrowLeft') { e.preventDefault(); goCard(1); }       // RTL: left = next
+      else if (e.key === 'ArrowRight') { e.preventDefault(); goCard(-1); }       // RTL: right = previous
+      else if (e.key === 's' || e.key === 'S' || e.key === 'ד') { e.preventDefault(); speakVerb(cards.list[cards.index], state.mode === 'trans'); }
+      else if (e.key === 'k' || e.key === 'K' || e.key === 'ל') { e.preventDefault(); markCard(true); }
+      else if (e.key === 'l' || e.key === 'L' || e.key === 'ך') { e.preventDefault(); markCard(false); }
+    } else if (state.mode === 'quiz' || state.mode === 'tquiz') {
+      const q = quiz.pool[quiz.pos];
+      if (!q || $('quizPanel').classList.contains('hidden')) return;
+      if (/^[1-4]$/.test(e.key) && q.chosen === null) { e.preventDefault(); answerQuiz(Number(e.key) - 1); }
+      else if (e.key === 'Enter' && q.chosen !== null && tag !== 'BUTTON') { e.preventDefault(); nextQuiz(); }
+    } else if (state.mode === 'write') {
+      if (e.key === 'Enter' && tag !== 'BUTTON' && write.current) {
+        e.preventDefault();
+        if (write.checked) nextWrite(false); else checkWrite();
+      }
+    }
+  });
+
+  // ---------- THEME (dark mode) ----------
+  const themeBtn = $('themeToggle');
+  function applyTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    const dark = t === 'dark';
+    themeBtn.textContent = dark ? '☀️' : '🌙';
+    themeBtn.setAttribute('aria-label', dark ? 'מעבר למצב בהיר' : 'מעבר למצב כהה');
+    themeBtn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+  }
+  applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
+  themeBtn.addEventListener('click', () => {
+    const t = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    applyTheme(t);
+    try { localStorage.setItem('irregularVerbs.theme', t); } catch (e) { /* ignore */ }
+  });
+
+  // ---------- "HOW TO" TIP ----------
+  const howTo = $('howTo');
+  let howClosed = false;
+  try { howClosed = localStorage.getItem(LS_HOWTO) === '1'; } catch (e) { /* ignore */ }
+  howTo.open = !howClosed;
+  howTo.addEventListener('toggle', () => { try { localStorage.setItem(LS_HOWTO, howTo.open ? '0' : '1'); } catch (e) { /* ignore */ } });
+
+  // ---------- INIT ----------
+  setMode(state.mode);
+})();
+</script>
+</body>
+</html>
