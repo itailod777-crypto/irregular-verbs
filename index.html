@@ -219,6 +219,79 @@
     .lists { grid-template-columns: 1fr; }
     .panel { padding: 22px 14px; border-radius: 22px; }
   }
+  /* ---------- v5: animations ---------- */
+  .aurora { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+  .aurora span { position: absolute; width: 55vmax; height: 55vmax; border-radius: 50%; filter: blur(70px); opacity: .32; will-change: transform; }
+  .aurora .a1 { background: #7aa7ff; top: -25vmax; right: -15vmax; animation: drift1 18s ease-in-out infinite alternate; }
+  .aurora .a2 { background: #ffb38a; top: -20vmax; left: -20vmax; animation: drift2 22s ease-in-out infinite alternate; }
+  .aurora .a3 { background: #b79bff; bottom: -30vmax; left: 20vw; opacity: .22; animation: drift3 26s ease-in-out infinite alternate; }
+  html[data-theme="dark"] .aurora span { opacity: .18; }
+  @keyframes drift1 { to { transform: translate(-12vmax, 10vmax) scale(1.15); } }
+  @keyframes drift2 { to { transform: translate(14vmax, 8vmax) scale(.9); } }
+  @keyframes drift3 { to { transform: translate(-10vmax, -12vmax) scale(1.2); } }
+  body { background-image: none; }
+
+  .intro { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; pointer-events: none;
+    background: radial-gradient(circle at 50% 45%, var(--surface) 0%, var(--bg) 70%); animation: introOut .35s ease .85s forwards; }
+  .intro-inner { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .intro-tiles { display: flex; gap: 10px; direction: ltr; }
+  .intro-tile { padding: 12px 18px; border-radius: 16px; color: #fff; font-weight: 800; font-size: clamp(22px, 6vw, 34px); box-shadow: var(--shadow);
+    opacity: 0; transform: translateY(24px) rotateX(70deg) scale(.8); animation: tileIn .5s cubic-bezier(.2,1.3,.4,1) forwards; }
+  .intro-tile:nth-child(1) { background: var(--blue); animation-delay: .05s; }
+  .intro-tile:nth-child(2) { background: var(--violet); animation-delay: .17s; }
+  .intro-tile:nth-child(3) { background: var(--orange); animation-delay: .29s; }
+  .intro-title { font-size: clamp(20px, 5vw, 28px); font-weight: 800; opacity: 0; transform: translateY(12px); animation: fadeUp .4s ease .4s forwards; }
+  .intro-skip { font-size: 12px; color: var(--muted); opacity: 0; animation: fadeUp .3s ease .55s forwards; }
+  @keyframes tileIn { to { opacity: 1; transform: none; } }
+  @keyframes introOut { to { opacity: 0; transform: scale(1.06); visibility: hidden; } }
+  .intro.skip { animation: introOut .2s ease forwards; }
+
+  /* page entrance after intro */
+  body.entering header > *, body.entering .howto, body.entering .modes-wrap .mode-row, body.entering .mode-desc { animation: fadeUp .5s cubic-bezier(.2,.8,.2,1) both; }
+  body.entering header h1 { animation-delay: .75s; } body.entering header .subtitle { animation-delay: .82s; }
+  body.entering .howto { animation-delay: .88s; }
+  body.entering .modes-wrap .mode-row:nth-child(1) { animation-delay: .92s; } body.entering .modes-wrap .mode-row:nth-child(2) { animation-delay: .98s; }
+  body.entering .mode-desc { animation-delay: 1.02s; }
+
+  /* staggered entrance on mode switch */
+  .section.show { animation: none; }
+  .section.show > * { animation: riseIn .45s cubic-bezier(.2,.8,.2,1) both; }
+  .section.show > *:nth-child(2) { animation-delay: .05s; } .section.show > *:nth-child(3) { animation-delay: .1s; }
+  .section.show > *:nth-child(4) { animation-delay: .15s; } .section.show > *:nth-child(5) { animation-delay: .2s; }
+  .section.show > *:nth-child(n+6) { animation-delay: .24s; }
+  @keyframes riseIn { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: none; } }
+  .animate-in > * { animation: popIn .38s cubic-bezier(.2,1.2,.4,1) both; animation-delay: calc(var(--i, 0) * 22ms); }
+  @keyframes popIn { from { opacity: 0; transform: translateY(8px) scale(.92); } to { opacity: 1; transform: none; } }
+  .mode-desc.swap { animation: fadeUp .35s ease both; }
+  .mode-btn.active { animation: modePop .35s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes modePop { 50% { transform: scale(1.06); } }
+
+  /* satisfying flip + card change */
+  .card { transition: transform .7s cubic-bezier(.3,1.45,.45,1); }
+  .scene:active .card { transform: scale(.985); }
+  .scene:active .card.flipped { transform: rotateY(180deg) scale(.985); }
+  .scene.slide-next .card { animation: slideNext .35s cubic-bezier(.2,.8,.2,1); }
+  .scene.slide-prev .card { animation: slidePrev .35s cubic-bezier(.2,.8,.2,1); }
+  @keyframes slideNext { from { opacity: 0; transform: translateX(-40px) rotate(-2deg); } to { opacity: 1; transform: none; } }
+  @keyframes slidePrev { from { opacity: 0; transform: translateX(40px) rotate(2deg); } to { opacity: 1; transform: none; } }
+
+  .bump { animation: bump .4s cubic-bezier(.2,1.6,.4,1); }
+  @keyframes bump { 40% { transform: scale(1.15); } }
+  .big-score { animation: popIn .5s cubic-bezier(.2,1.3,.4,1) both; }
+
+  /* progress ring on end screens */
+  .ring { position: relative; width: 132px; height: 132px; margin: 4px auto 10px; }
+  .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring .track { fill: none; stroke: var(--border); stroke-width: 10; }
+  .ring .bar { fill: none; stroke: var(--accent); stroke-width: 10; stroke-linecap: round; stroke-dasharray: 339.3; stroke-dashoffset: 339.3; transition: stroke-dashoffset 1s cubic-bezier(.2,.8,.2,1); }
+  .ring .ring-val { position: absolute; inset: 0; display: grid; place-items: center; font-size: 28px; font-weight: 800; color: var(--accent-ink); direction: ltr; }
+  .confetti-canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 999; }
+
+  @media (prefers-reduced-motion: reduce) { .intro, .aurora { display: none !important; } }
+  .toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px; cursor: pointer; box-shadow: var(--shadow-sm); }
+  .toggle input { accent-color: var(--accent); width: 15px; height: 15px; margin: 0; }
+  .rule-hint summary { cursor: pointer; font-weight: 600; color: var(--accent-ink); font-size: 14.5px; }
+  .rule-hint[open] summary { margin-bottom: 6px; }
   /* ---------- v4 additions ---------- */
   .parts-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; font-size: 14.5px; margin-bottom: 10px; color: var(--text); }
   .parts-row select { font: inherit; font-weight: 700; padding: 5px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); cursor: pointer; }
@@ -299,6 +372,14 @@
 </style>
 </head>
 <body>
+<div class="aurora" aria-hidden="true"><span class="a1"></span><span class="a2"></span><span class="a3"></span></div>
+<div id="intro" class="intro" aria-hidden="true">
+  <div class="intro-inner">
+    <div class="intro-tiles"><span class="intro-tile">go</span><span class="intro-tile">went</span><span class="intro-tile">gone</span></div>
+    <div class="intro-title">פעלים בלתי רגילים</div>
+    <div class="intro-skip">לחצו בכל מקום כדי לדלג</div>
+  </div>
+</div>
 <div class="container">
   <header>
     <button id="themeToggle" class="theme-toggle" aria-label="מעבר למצב כהה" title="מצב כהה / בהיר">🌙</button>
@@ -309,7 +390,7 @@
   <details id="howTo" class="howto">
     <summary>💡 איך לומדים?</summary>
     <ol>
-      <li><b>לומדים לפי דפוס.</b> בוחרים קטגוריה ב"🗂️ שלוש הצורות", קוראים את הכלל שבתיבה ורואים אותו בכל כרטיסייה. החלק שמשתנה מודגש בצד האחורי.</li>
+      <li><b>לומדים לפי דפוס.</b> בוחרים קטגוריה ב"🗂️ שלוש הצורות" וקוראים את הכלל שבתיבה. בצד הקדמי רק הפועל, מנסים להיזכר בצורות והופכים כדי לבדוק. החלק שמשתנה מודגש בצד האחורי.</li>
       <li><b>תרגום.</b> ב"📖 תרגום" מתרגלים רק את המשמעות: מאנגלית לעברית, או מעברית לאנגלית.</li>
       <li><b>ממיינים.</b> אחרי כל כרטיסייה לוחצים <b>✔ אני יודע</b> או <b>✖ עדיין לומד</b>. מילים ב"עדיין לומד" נכנסות ל"⭐ מילים קשות".</li>
       <li><b>בוחנים את עצמכם.</b> בחינה אמריקאית (צורות או תרגום), בחינת כתיבה, ומשחק התאמה נגד השעון. אפשר לבחור חלק, קטגוריה או מילים קשות.</li>
@@ -367,6 +448,7 @@
       <span id="cardCounter" aria-live="polite"></span>
       <button id="shuffleBtn" class="small-btn" aria-label="ערבב את הכרטיסיות בקבוצה">🔀 ערבב</button>
       <button id="orderBtn" class="small-btn" aria-label="החזר לסדר המקורי">↺ סדר מקורי</button>
+      <label id="frontHeWrap" class="toggle"><input type="checkbox" id="frontHeToggle"> הצג תרגום בצד הקדמי</label>
     </div>
     <div class="scene">
       <div id="card" class="card" role="button" tabindex="0" aria-label="כרטיסייה - לחץ כדי להפוך">
@@ -423,6 +505,7 @@
     </div>
     <div id="quizEnd" class="panel end hidden" aria-live="polite">
       <h2>🎉 סיימת את הבחינה!</h2>
+      <div class="ring" aria-hidden="true"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="54"></circle><circle id="quizRingBar" class="bar" cx="60" cy="60" r="54"></circle></svg><div id="quizRingVal" class="ring-val">0%</div></div>
       <div id="quizFinal" class="big-score"></div>
       <div id="quizEndNote"></div>
       <div class="exam-actions">
@@ -463,6 +546,7 @@
     </div>
     <div id="writeEnd" class="panel end hidden" aria-live="polite">
       <h2>🏁 סיימת את כל המילים!</h2>
+      <div class="ring" aria-hidden="true"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="54"></circle><circle id="writeRingBar" class="bar" cx="60" cy="60" r="54"></circle></svg><div id="writeRingVal" class="ring-val">0%</div></div>
       <div id="writeFinal" class="big-score"></div>
       <div id="writeEndNote"></div>
       <div class="exam-actions">
@@ -636,10 +720,17 @@
     return '<div class="rule-title">💡 ' + escapeHtml(g.name) + '</div>' +
       '<div class="rule-text">' + g.rule + ': <span class="rule-ex ltr">' + hlForm(ex, 'v1') + ' – ' + hlForm(ex, 'v2') + ' – ' + hlForm(ex, 'v3') + '</span></div>';
   }
-  function showRule(gi) {
+  // In exams the rule is a hint, so it is collapsed by default (no answer leaks before answering).
+  function showRule(gi, asHint) {
     const box = $('ruleBox');
     if (gi === null || gi === undefined) { box.classList.add('hidden'); box.removeAttribute('data-group'); return; }
-    if (box.getAttribute('data-group') !== String(gi)) { box.innerHTML = ruleHtml(gi); box.setAttribute('data-group', String(gi)); }
+    const key = (asHint ? 'hint:' : '') + gi;
+    if (box.getAttribute('data-group') !== key) {
+      box.innerHTML = asHint
+        ? '<details class="rule-hint"><summary>💡 רמז: הכלל של הקטגוריה (לחצו כדי להציג)</summary>' + ruleHtml(gi) + '</details>'
+        : ruleHtml(gi);
+      box.setAttribute('data-group', key);
+    }
     box.classList.remove('hidden');
   }
 
@@ -667,13 +758,79 @@
     speakText(onlyV1 ? v.v1 : [v.v1, v.v2, v.v3].map(f => f.replace(/\s*\/\s*/g, ', ')).join(', '));
   }
 
+
+  // ---------- ANIMATION HELPERS ----------
+  const reduceMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  function bump(el) { if (!el || reduceMotion()) return; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+  function animateIn(container) {
+    if (!container || reduceMotion()) return;
+    Array.from(container.children).forEach((c, i) => c.style.setProperty('--i', String(i)));
+    container.classList.remove('animate-in'); void container.offsetWidth; container.classList.add('animate-in');
+    clearTimeout(container._animT);
+    container._animT = setTimeout(() => container.classList.remove('animate-in'), 900);
+  }
+  function setRing(prefix, pct) {
+    const bar = $(prefix + 'RingBar'), val = $(prefix + 'RingVal');
+    if (!bar || !val) return;
+    const C = 339.3;
+    bar.style.transition = 'none'; bar.style.strokeDashoffset = String(C); void bar.getBoundingClientRect();
+    bar.style.transition = '';
+    requestAnimationFrame(() => { bar.style.strokeDashoffset = String(C * (1 - pct / 100)); });
+    if (reduceMotion()) { val.textContent = pct + '%'; return; }
+    const t0 = performance.now(), dur = 900;
+    const step = (t) => {
+      const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      val.textContent = Math.round(pct * e) + '%';
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  // lightweight canvas confetti (transform-free, single canvas, auto-removed)
+  let confettiCanvas = null, confettiParts = [], confettiRAF = 0;
+  function confetti(amount, origin) {
+    if (reduceMotion()) return;
+    if (!confettiCanvas) {
+      confettiCanvas = document.createElement('canvas');
+      confettiCanvas.className = 'confetti-canvas';
+      confettiCanvas.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(confettiCanvas);
+    }
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    confettiCanvas.width = innerWidth * dpr; confettiCanvas.height = innerHeight * dpr;
+    const colors = ['#2563eb', '#7c3aed', '#ea580c', '#16a34a', '#db2777', '#f59e0b', '#14b8a6'];
+    const ox = (origin && origin.x != null ? origin.x : innerWidth / 2), oy = (origin && origin.y != null ? origin.y : innerHeight / 3);
+    for (let i = 0; i < amount; i++) {
+      const a = -Math.PI / 2 + (Math.random() - .5) * Math.PI * (amount > 60 ? 1.6 : 1.1);
+      const sp = (amount > 60 ? 9 : 6) + Math.random() * 6;
+      confettiParts.push({ x: ox, y: oy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 4 + Math.random() * 5, rot: Math.random() * 6, vr: (Math.random() - .5) * .4,
+        c: colors[(Math.random() * colors.length) | 0], life: 0, max: 60 + Math.random() * 40, shape: Math.random() < .5 });
+    }
+    if (!confettiRAF) confettiRAF = requestAnimationFrame(confettiTick);
+  }
+  function confettiTick() {
+    const ctx = confettiCanvas.getContext('2d');
+    const dpr = confettiCanvas.width / innerWidth;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+    confettiParts = confettiParts.filter(p => p.life < p.max && p.y < innerHeight + 20);
+    confettiParts.forEach(p => {
+      p.life++; p.vy += .28; p.vx *= .985; p.vy *= .985; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+      ctx.save(); ctx.globalAlpha = Math.max(0, 1 - p.life / p.max); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.c;
+      if (p.shape) ctx.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2); else { ctx.beginPath(); ctx.arc(0, 0, p.r / 2.4, 0, Math.PI * 2); ctx.fill(); }
+      ctx.restore();
+    });
+    if (confettiParts.length) confettiRAF = requestAnimationFrame(confettiTick);
+    else { confettiRAF = 0; ctx.clearRect(0, 0, innerWidth, innerHeight); }
+  }
+  function centerOf(el) { if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
+
   // ---------- MODE / GROUP / PART UI ----------
   const modeBtns = Array.from(document.querySelectorAll('.mode-btn'));
   modeBtns.forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
   const isStudy = () => STUDY.includes(state.mode);
 
   const MODE_DESC = {
-    cards: 'בצד אחד הפועל והתרגום שלו. הופכים את הכרטיסייה ורואים את שלוש הצורות (V1 / V2 / V3).',
+    cards: 'בצד הקדמי רק הפועל באנגלית. נסו להיזכר בשלוש הצורות ובתרגום, ואז הפכו את הכרטיסייה כדי לבדוק.',
     trans: 'בצד אחד הפועל באנגלית, ובצד השני התרגום לעברית. לוחצים על הכרטיסייה כדי להפוך.',
     quiz: 'רואים פועל ובוחרים את צורות ה-V2 וה-V3 הנכונות מתוך 4 תשובות.',
     tquiz: 'רואים פועל ובוחרים את התרגום הנכון מתוך 4 תשובות.',
@@ -696,15 +853,19 @@
     $('partBox').classList.toggle('hidden', study);
     $('dirBox').classList.toggle('hidden', !(mode === 'trans' || mode === 'tquiz'));
     renderDir();
+    ['cardsSection', 'quizSection', 'writeSection', 'matchSection'].forEach(id => $(id).classList.remove('show'));
+    void document.body.offsetWidth; // restart the staggered entrance
+    const desc = $('modeDesc'); desc.classList.remove('swap'); void desc.offsetWidth; desc.classList.add('swap');
     $('cardsSection').classList.toggle('show', study);
     $('quizSection').classList.toggle('show', mode === 'quiz' || mode === 'tquiz');
     $('writeSection').classList.toggle('show', mode === 'write');
     $('matchSection').classList.toggle('show', mode === 'match');
     clearQuizTimer();
     stopMatchTimer();
-    if (study) { renderGroupButtons(); selectGroup(state.group, STUDY.includes(prevMode)); }
+    if (study) { renderGroupButtons(); selectGroup(state.group, STUDY.includes(prevMode)); animateIn($('groupButtons')); }
     else {
       renderPartButtons();
+      animateIn($('partButtons')); animateIn($('catButtons'));
       updateExamRule();
       if (mode === 'quiz' || mode === 'tquiz') startQuiz();
       else if (mode === 'write') startWrite();
@@ -815,7 +976,7 @@
     return allVerbs.slice(part * partSize(), (part + 1) * partSize());
   }
   function updateExamRule() {
-    showRule(typeof state.part === 'string' && state.part[0] === 'g' ? Number(state.part.slice(1)) : null);
+    showRule(typeof state.part === 'string' && state.part[0] === 'g' ? Number(state.part.slice(1)) : null, true);
   }
 
   $('partsSelect').addEventListener('change', (e) => {
@@ -839,6 +1000,8 @@
   }
 
   // ---------- CARDS (forms + translation) ----------
+  let frontHe = false;
+  try { frontHe = localStorage.getItem('irregularVerbs.frontHe') === '1'; } catch (e) { /* ignore */ }
   const cards = { list: [], index: 0, flipped: false, shuffled: false };
   const cardEl = $('card');
 
@@ -890,7 +1053,8 @@
     front.classList.toggle('he-big', he2en);
     front.setAttribute('dir', he2en ? 'rtl' : 'ltr');
     $('frontMeaning').textContent = v ? v.he : '';
-    $('frontMeaning').classList.toggle('hidden', trans);
+    $('frontMeaning').classList.toggle('hidden', trans || !frontHe);
+    $('frontHeWrap').classList.toggle('hidden', trans);
     // back
     cardEl.querySelector('.forms').classList.toggle('hidden', trans);
     $('backMeaning').classList.toggle('hidden', trans);
@@ -909,8 +1073,9 @@
     }
     $('prevBtn').disabled = n <= 1;
     $('nextBtn').disabled = n <= 1;
-    $('speakBtn').disabled = !v;
-    $('speakBtn').setAttribute('aria-label', trans ? 'השמע את הפועל באנגלית' : 'השמע את שלוש הצורות');
+    $('speakBtn').disabled = !v || !canSpeakCard();
+    $('speakBtn').title = v && !canSpeakCard() ? 'אפשר להשמיע אחרי שהופכים את הכרטיסייה' : '';
+    $('speakBtn').setAttribute('aria-label', trans || !cards.flipped ? 'השמע את הפועל באנגלית' : 'השמע את שלוש הצורות');
     $('knowBtn').disabled = !v;
     $('learnBtn').disabled = !v;
     $('shuffleBtn').disabled = n <= 1;
@@ -929,11 +1094,21 @@
     let label = 'אין כרטיסייה';
     if (v) {
       if (trans) label = 'כרטיסיית תרגום: ' + (cards.flipped ? (he2en ? v.v1 : v.he) : (he2en ? v.he : v.v1)) + '. לחץ כדי להפוך';
-      else label = 'כרטיסייה: ' + v.v1 + ' - ' + v.he + '. ' + (cards.flipped ? 'צורות: ' + v.v1 + ', ' + v.v2 + ', ' + v.v3 + '. לחץ כדי לחזור' : 'לחץ כדי להפוך');
+      else label = cards.flipped
+        ? 'כרטיסייה: ' + v.v1 + ' - ' + v.he + '. צורות: ' + v.v1 + ', ' + v.v2 + ', ' + v.v3 + '. לחץ כדי לחזור'
+        : 'כרטיסייה: ' + v.v1 + (frontHe ? ' - ' + v.he : '') + '. לחץ כדי להפוך';
     }
     cardEl.setAttribute('aria-label', label);
   }
 
+  // Speaking must not reveal the answer: on the front of a forms card only V1 is spoken;
+  // on a Hebrew→English translation card nothing is spoken until the card is flipped.
+  function canSpeakCard() { return !(state.mode === 'trans' && state.dir === 'he2en' && !cards.flipped); }
+  function speakCard() {
+    const v = cards.list[cards.index];
+    if (!v || !canSpeakCard()) return;
+    speakVerb(v, state.mode === 'trans' || !cards.flipped);
+  }
   function flipCard() { if (!cards.list.length) return; setFlipped(!cards.flipped); renderCard(); }
   function goCard(delta) {
     const n = cards.list.length;
@@ -941,6 +1116,12 @@
     cards.index = (cards.index + delta + n) % n;
     setFlipped(false, true);
     renderCard();
+    if (!reduceMotion()) {
+      const sc = cardEl.parentElement;
+      sc.classList.remove('slide-next', 'slide-prev'); void sc.offsetWidth;
+      sc.classList.add(delta > 0 ? 'slide-next' : 'slide-prev');
+      clearTimeout(sc._t); sc._t = setTimeout(() => sc.classList.remove('slide-next', 'slide-prev'), 400);
+    }
   }
   let toastTimer = null;
   function toast(msg, cls) {
@@ -959,14 +1140,21 @@
     saveKnown();
     renderGroupButtons();
     const list = groupVerbs(state.group);
-    if (knows && list.length && knownCount(list) === list.length) toast('🎉 סימנת את כל המילים בקבוצה כידועות!', 'ok');
+    if (knows) bump($('knownStat'));
+    if (knows && list.length && knownCount(list) === list.length) { toast('🎉 סימנת את כל המילים בקבוצה כידועות!', 'ok'); confetti(140); }
     if (cards.list.length > 1) goCard(1); else renderCard();
   }
 
   cardEl.addEventListener('click', flipCard);
   $('prevBtn').addEventListener('click', (e) => { e.stopPropagation(); goCard(-1); });
   $('nextBtn').addEventListener('click', (e) => { e.stopPropagation(); goCard(1); });
-  $('speakBtn').addEventListener('click', (e) => { e.stopPropagation(); speakVerb(cards.list[cards.index], state.mode === 'trans'); });
+  $('speakBtn').addEventListener('click', (e) => { e.stopPropagation(); speakCard(); });
+  $('frontHeToggle').checked = frontHe;
+  $('frontHeToggle').addEventListener('change', (e) => {
+    frontHe = e.target.checked;
+    try { localStorage.setItem('irregularVerbs.frontHe', frontHe ? '1' : '0'); } catch (err) { /* ignore */ }
+    renderCard();
+  });
   $('knowBtn').addEventListener('click', () => markCard(true));
   $('learnBtn').addEventListener('click', () => markCard(false));
   $('resetKnownBtn').addEventListener('click', () => {
@@ -1130,6 +1318,7 @@
       fb.className = 'feedback bad';
     }
     $('quizScore').textContent = scoreText();
+    if (ok) { bump($('quizScore')); confetti(36, centerOf($('quizOptions').children[i])); }
     $('quizSpeakBtn').classList.remove('hidden');
     $('quizNextBtn').classList.remove('hidden');
     updateQuizProgress();
@@ -1158,6 +1347,8 @@
       ? 'מילים לחזרה: <span class="ltr">' + escapeHtml(wrongList.join(', ')) + '</span>'
       : 'כל הכבוד! לא הייתה אף טעות 🌟');
     $('quizRetryBtn').classList.toggle('hidden', wrongList.length === 0);
+    setRing('quiz', pct);
+    if (pct >= 50) confetti(pct >= 90 ? 220 : 130);
     $('quizRestartBtn').focus({ preventScroll: true });
   }
 
@@ -1267,8 +1458,8 @@
     write.history.push({ verb: v, ok: ok, requeued: requeued });
     const fb = $('writeFeedback');
     const ans = '<span class="answer">' + hlForm(v, 'v1') + ' – ' + hlForm(v, 'v2') + ' – ' + hlForm(v, 'v3') + '</span>';
-    if (ok) { fb.innerHTML = '✅ מצוין! ' + ans; fb.className = 'feedback ok'; }
-    else { fb.innerHTML = '❌ לא מדויק. התשובה הנכונה: ' + ans + '<div class="fb-hint">💡 ' + groups[v.g].rule + '</div>'; fb.className = 'feedback bad'; }
+    if (ok) { fb.innerHTML = '✅ מצוין! ' + ans; fb.className = 'feedback ok'; confetti(30, centerOf(inV3)); bump($('statOk')); }
+    else { bump($('statBad')); fb.innerHTML = '❌ לא מדויק. התשובה הנכונה: ' + ans + '<div class="fb-hint">💡 ' + groups[v.g].rule + '</div>'; fb.className = 'feedback bad'; }
     $('checkBtn').classList.add('hidden');
     $('writeSpeakBtn').classList.remove('hidden');
     $('writeNextBtn').classList.remove('hidden');
@@ -1310,6 +1501,9 @@
       ? 'הצלחת בניסיון הראשון ב-' + firstTry + ' מילים. ' + write.failSet.size + ' מילים דרשו חזרה (נוספו לרשימת המילים הקשות).'
       : 'מושלם! כל המילים נכונות בניסיון הראשון 🌟';
     $('writeRetryBtn').classList.toggle('hidden', write.failSet.size === 0);
+    const wpct = write.total ? Math.round(firstTry / write.total * 100) : 0;
+    setRing('write', wpct);
+    confetti(wpct >= 90 ? 220 : 130);
     $('writeRestartBtn').focus({ preventScroll: true });
   }
 
@@ -1404,7 +1598,8 @@
       $('matchMsg').textContent = '✅ ' + a.v.v1 + ' = ' + a.v.he;
       $('matchMsg').className = 'feedback ok';
       renderMatchStats();
-      if (match.left === 0) finishMatch();
+      bump($('matchLeft'));
+      if (match.left === 0) finishMatch(); else confetti(18, centerOf(b.el));
     } else {
       match.penalty += 1000;
       match.busy = true;
@@ -1432,6 +1627,7 @@
       $('matchResult').textContent = fmtSec(total) + ' שניות';
       $('matchEndNote').textContent = isBest ? (prev ? '🏆 שיא חדש! השיא הקודם: ' + fmtSec(prev) + ' שנ׳' : '🏆 זה השיא הראשון שלך בחלק הזה!') : 'השיא שלך: ' + fmtSec(prev) + ' שנ׳. נסה לשבור אותו!';
       $('matchAgainBtn').focus({ preventScroll: true });
+      confetti(isBest ? 220 : 130);
     }, 450);
   }
   $('matchShuffleBtn').addEventListener('click', startMatch);
@@ -1450,7 +1646,7 @@
         e.preventDefault(); flipCard();
       } else if (e.key === 'ArrowLeft') { e.preventDefault(); goCard(1); }       // RTL: left = next
       else if (e.key === 'ArrowRight') { e.preventDefault(); goCard(-1); }       // RTL: right = previous
-      else if (e.key === 's' || e.key === 'S' || e.key === 'ד') { e.preventDefault(); speakVerb(cards.list[cards.index], state.mode === 'trans'); }
+      else if (e.key === 's' || e.key === 'S' || e.key === 'ד') { e.preventDefault(); speakCard(); }
       else if (e.key === 'k' || e.key === 'K' || e.key === 'ל') { e.preventDefault(); markCard(true); }
       else if (e.key === 'l' || e.key === 'L' || e.key === 'ך') { e.preventDefault(); markCard(false); }
     } else if (state.mode === 'quiz' || state.mode === 'tquiz') {
@@ -1488,6 +1684,22 @@
   try { howClosed = localStorage.getItem(LS_HOWTO) === '1'; } catch (e) { /* ignore */ }
   howTo.open = !howClosed;
   howTo.addEventListener('toggle', () => { try { localStorage.setItem(LS_HOWTO, howTo.open ? '0' : '1'); } catch (e) { /* ignore */ } });
+
+  // ---------- INTRO (≈1.2s, skippable, purely visual: never blocks clicks) ----------
+  const intro = $('intro');
+  function endIntro(skipped) {
+    if (intro && intro.parentNode) intro.parentNode.removeChild(intro);
+    if (skipped) document.body.classList.remove('entering');
+  }
+  if (reduceMotion()) endIntro(true);
+  else {
+    document.body.classList.add('entering');
+    const skip = () => { if (intro.parentNode) { intro.classList.add('skip'); setTimeout(() => endIntro(true), 200); } };
+    document.addEventListener('pointerdown', skip, { once: true });
+    document.addEventListener('keydown', skip, { once: true });
+    setTimeout(() => endIntro(false), 1250);
+    setTimeout(() => document.body.classList.remove('entering'), 1600);
+  }
 
   // ---------- INIT ----------
   setMode(state.mode);
