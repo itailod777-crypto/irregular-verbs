@@ -818,6 +818,14 @@
     .tabbar .tab-lbl { display: none; }
     .tabbar .tab-short { display: block; white-space: nowrap; }
   }
+
+  /* ---------- v9: end-of-session screens ---------- */
+  #cardsSection.cards-done .scene, #cardsSection.cards-done #cardControls, #cardsSection.cards-done .sort-row, #cardsSection.cards-done .counter, #cardsSection.cards-done #removeHardBtn { display: none !important; }
+  .cards-end { margin: 6px auto 14px; }
+  .cards-end-counts { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 6px 0 10px; }
+  .cards-end-note .end-sub bdi { font-weight: 700; color: var(--text); }
+  .match-board { font-weight: 700; color: var(--accent-ink); }
+  #matchEnd .exam-actions { flex-wrap: wrap; }
 </style>
 </head>
 <body>
@@ -974,6 +982,16 @@
       <button id="speakBtn" class="btn green" aria-label="השמע"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>השמע</button>
       <button id="nextBtn" class="btn primary" aria-label="הכרטיסייה הבאה">הבא<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
     </div>
+    <div id="cardsEnd" class="panel end cards-end hidden" aria-live="polite">
+      <h2 class="end-title"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg> <span id="cardsEndTitle">סיימת את הקבוצה!</span></h2>
+      <div class="ring" aria-hidden="true"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="54"></circle><circle id="cardsRingBar" class="bar" cx="60" cy="60" r="54"></circle></svg><div id="cardsRingVal" class="ring-val">0%</div></div>
+      <div id="cardsEndNote" class="cards-end-note"></div>
+      <div class="exam-actions">
+        <button id="cardsRestartBtn" class="btn accent">להתחיל שוב מההתחלה</button>
+        <button id="cardsLearnBtn" class="btn orange">לתרגל רק את מה שעוד לא יודע</button>
+        <button id="cardsBackBtn" class="btn ghost"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>חזרה לכרטיסייה האחרונה</button>
+      </div>
+    </div>
     <div class="sort-row">
       <button id="learnBtn" class="btn sort-learn" aria-label="עדיין לומד - הוסף למילים הקשות ועבור לבאה"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>עדיין לומד</button>
       <button id="knowBtn" class="btn sort-know" aria-label="אני יודע - סמן כידוע ועבור לבאה"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>אני יודע</button>
@@ -1063,7 +1081,7 @@
   <section id="writeSection" class="section" aria-label="בחינת כתיבה עצמית">
     <div class="stats" aria-live="polite">
       <span class="stat stat-ok"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg> הצלחתי: <b id="statOk">0</b></span>
-      <span class="stat stat-bad"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg> לחזור שוב: <b id="statBad">0</b></span>
+      <span class="stat stat-bad"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg> טעיתי: <b id="statBad">0</b></span>
       <span class="stat">נותרו: <b id="statLeft">0</b></span>
     </div>
     <div id="writeProgress" class="progress" role="progressbar" aria-label="התקדמות בבחינה" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div></div></div>
@@ -1100,7 +1118,7 @@
     </div>
     <div class="lists">
       <div class="list-box success"><h3>הצלחתי</h3><ul id="successList"></ul></div>
-      <div class="list-box fail"><h3>לחזור שוב</h3><ul id="failList"></ul></div>
+      <div class="list-box fail"><h3>טעיתי (נוספו למילים הקשות)</h3><ul id="failList"></ul></div>
     </div>
   </section>
 
@@ -1113,16 +1131,16 @@
     </div>
     <div id="matchProgress" class="progress" role="progressbar" aria-label="התקדמות במשחק" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div></div></div>
     <div id="matchPanel" class="panel">
-      <div class="prompt">התאם כל פועל באנגלית לתרגום שלו. טעות מוסיפה שנייה לזמן.</div>
+      <div class="prompt"><span id="matchBoard" class="match-board"></span>התאם כל פועל באנגלית לתרגום שלו. טעות מוסיפה שנייה לזמן.</div>
       <div id="matchGrid" class="match-grid" role="group" aria-label="אריחי המשחק"></div>
       <div id="matchMsg" class="feedback" aria-live="polite"></div>
-      <div class="exam-actions"><button id="matchShuffleBtn" class="btn ghost"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h3.5c2 0 3 1 4.5 3.5l2 3.5c1.5 2.5 2.5 3 4.5 3H21M3 17h3.5c1.2 0 2-.3 2.8-1.1M14.7 8.1c.8-.8 1.6-1.1 2.8-1.1H21M18.5 4.5L21 7l-2.5 2.5M18.5 14.5L21 17l-2.5 2.5"/></svg>לוח חדש</button></div>
+      <div class="exam-actions"><button id="matchShuffleBtn" class="btn ghost"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h3.5c2 0 3 1 4.5 3.5l2 3.5c1.5 2.5 2.5 3 4.5 3H21M3 17h3.5c1.2 0 2-.3 2.8-1.1M14.7 8.1c.8-.8 1.6-1.1 2.8-1.1H21M18.5 4.5L21 7l-2.5 2.5M18.5 14.5L21 17l-2.5 2.5"/></svg>ערבב את הלוח</button></div>
     </div>
     <div id="matchEnd" class="panel end hidden" aria-live="polite">
-      <h2>🧩 כל הכבוד!</h2>
+      <h2 class="end-title"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg> <span id="matchEndTitle">כל הכבוד!</span></h2>
       <div id="matchResult" class="big-score"></div>
       <div id="matchEndNote"></div>
-      <div class="exam-actions"><button id="matchAgainBtn" class="btn accent">🔄 שחק שוב</button></div>
+      <div class="exam-actions"><button id="matchNextBtn" class="btn accent hidden">ללוח הבא</button><button id="matchAgainBtn" class="btn accent">להתחיל שוב מההתחלה</button></div>
     </div>
   </section>
 </div>
@@ -1402,11 +1420,14 @@
     trans: 'בצד אחד הפועל באנגלית, ובצד השני התרגום לעברית. לוחצים על הכרטיסייה כדי להפוך.',
     quiz: 'רואים פועל ובוחרים את צורות ה-V2 וה-V3 הנכונות מתוך 4 תשובות.',
     tquiz: 'רואים פועל ובוחרים את התרגום הנכון מתוך 4 תשובות.',
-    write: 'כותבים לבד את צורות ה-V2 וה-V3. מילה שטעיתם בה תחזור בסוף.',
+    write: 'כותבים לבד את צורות ה-V2 וה-V3. כל מילה מופיעה פעם אחת, ובסוף אפשר לתרגל את הטעויות.',
     dict: 'שומעים פועל באנגלית (בלי לראות אותו) וכותבים את צורות ה-V2 וה-V3.',
     match: 'מתאימים כל פועל באנגלית לתרגום שלו, מהר ככל האפשר.'
   };
-  function setMode(mode) {
+  let modeReady = false;
+  function setMode(mode, force) {
+    if (modeReady && !force && mode === state.mode) return; // same tab again: keep the current session
+    modeReady = true;
     const prevMode = state.mode;
     $('modeDesc').textContent = MODE_DESC[mode];
     state.mode = mode;
@@ -1605,7 +1626,7 @@
     if (state.group === 'hard') state.group = 0;
     if (state.part === 'hard') state.part = 'all';
     saveState();
-    setMode(state.mode);
+    setMode(state.mode, true);
   }
 
   // A word was added to the difficult list: update buttons without restarting anything.
@@ -1627,11 +1648,12 @@
     state.parts = n;
     if (Number.isInteger(state.part)) state.part = 0; // numbering changed: start from part 1
     saveState();
-    selectPart(state.part);
+    selectPart(state.part, true);
   });
 
-  function selectPart(value) {
+  function selectPart(value, force) {
     if (value === 'hard' && hardSet.size === 0) value = 'all';
+    if (!force && value === state.part) { renderPartButtons(); return; } // same scope again: don't reshuffle / restart
     state.part = value;
     saveState();
     renderPartButtons();
@@ -1645,7 +1667,7 @@
   // ---------- CARDS (forms + translation) ----------
   let frontHe = false;
   try { frontHe = localStorage.getItem('irregularVerbs.frontHe') === '1'; } catch (e) { /* ignore */ }
-  const cards = { list: [], index: 0, flipped: false, shuffled: false };
+  const cards = { list: [], index: 0, flipped: false, shuffled: false, done: false, marks: new Map(), custom: false };
   const cardEl = $('card');
 
   function groupVerbs(value) {
@@ -1656,6 +1678,8 @@
 
   function selectGroup(idx, keepIndex) {
     if (idx === 'hard' && hardSet.size === 0) idx = 0;
+    // tapping the group you are already in keeps your place (no silent restart); after the summary it starts over
+    if (!keepIndex && idx === state.group && cards.list.length && !cards.done && !cards.custom) { renderGroupButtons(); return; }
     const changed = state.group !== idx;
     state.group = idx;
     saveState();
@@ -1664,7 +1688,10 @@
     const prevOrder = keepIndex && !changed && cards.shuffled ? cards.list.slice() : null;
     cards.list = prevOrder || groupVerbs(idx);
     cards.shuffled = !!prevOrder;
+    cards.custom = false;
+    if (!prevV1) cards.marks = new Map();
     cards.index = 0;
+    setCardsDone(false);
     if (prevV1) { const i = cards.list.findIndex(v => v.v1 === prevV1); if (i >= 0) cards.index = i; }
     setFlipped(false, true);
     renderCard();
@@ -1714,8 +1741,9 @@
     } else {
       ['backV1', 'backV2', 'backV3', 'backMeaning', 'backTrans'].forEach(id => { $(id).textContent = ''; });
     }
-    $('prevBtn').disabled = n <= 1;
-    $('nextBtn').disabled = n <= 1;
+    $('prevBtn').disabled = n === 0 || cards.index === 0;
+    $('nextBtn').disabled = n === 0;
+    $('nextBtn').lastChild && ($('nextBtn').firstChild.nodeType === 3) && ($('nextBtn').firstChild.nodeValue = v && cards.index === n - 1 ? 'לסיכום' : 'הבא');
     $('speakBtn').disabled = !v || !canSpeakCard();
     $('speakBtn').title = v && !canSpeakCard() ? 'אפשר להשמיע אחרי שהופכים את הכרטיסייה' : '';
     $('speakBtn').setAttribute('aria-label', trans || !cards.flipped ? 'השמע את הפועל באנגלית' : 'השמע את שלוש הצורות');
@@ -1753,10 +1781,14 @@
     speakVerb(v, state.mode === 'trans' || !cards.flipped);
   }
   function flipCard() { if (!cards.list.length) return; setFlipped(!cards.flipped); renderCard(); }
+  // Linear deck: no wrap-around. Going past the last card shows the "finished" summary.
   function goCard(delta) {
     const n = cards.list.length;
-    if (n <= 1) return;
-    cards.index = (cards.index + delta + n) % n;
+    if (!n || cards.done) return;
+    const to = cards.index + delta;
+    if (to < 0) return;
+    if (to >= n) { finishCards(); return; }
+    cards.index = to;
     setFlipped(false, true);
     renderCard();
     if (!reduceMotion()) {
@@ -1779,14 +1811,48 @@
     if (!v) return;
     const set = known[knownKey()];
     if (knows) { set.add(v.v1); toast('✔ <bdi dir="ltr">' + escapeHtml(v.v1) + '</bdi> סומן כידוע', 'ok'); }
-    else { set.delete(v.v1); addHard(v); toast('✖ <bdi dir="ltr">' + escapeHtml(v.v1) + '</bdi> נוסף למילים הקשות', 'bad'); }
+    cards.marks.set(v.v1, !!knows);
+    if (!knows) { set.delete(v.v1); addHard(v); toast('✖ <bdi dir="ltr">' + escapeHtml(v.v1) + '</bdi> נוסף למילים הקשות', 'bad'); }
     saveKnown();
     renderGroupButtons();
     const list = groupVerbs(state.group);
     if (knows) bump($('knownStat'));
     if (knows && list.length && knownCount(list) === list.length) { toast('🎉 סימנת את כל המילים בקבוצה כידועות!', 'ok'); confetti(140); }
-    if (cards.list.length > 1) goCard(1); else renderCard();
+    goCard(1);
   }
+  function setCardsDone(done) {
+    cards.done = done;
+    $('cardsSection').classList.toggle('cards-done', done);
+    $('cardsEnd').classList.toggle('hidden', !done);
+  }
+  function finishCards() {
+    const n = cards.list.length;
+    const marked = cards.list.filter(v => cards.marks.has(v.v1));
+    const knowN = marked.filter(v => cards.marks.get(v.v1)).length;
+    const learn = cards.list.filter(v => cards.marks.get(v.v1) === false);
+    setFlipped(false, true);
+    setCardsDone(true);
+    const what = cards.custom ? 'סיימת את המילים לתרגול!' : state.group === 'all' ? 'סיימת את כל הכרטיסיות!' : state.group === 'hard' ? 'סיימת את המילים הקשות!' : 'סיימת את קבוצה ' + (state.group + 1) + '!';
+    $('cardsEndTitle').textContent = what;
+    $('cardsEndNote').innerHTML = '<div class="end-sub">עברת על ' + n + ' כרטיסיות, כל אחת פעם אחת.</div>' +
+      '<div class="cards-end-counts"><span class="stat stat-ok">' + ICONS.check + ' אני יודע: <b>' + knowN + '</b></span><span class="stat stat-bad">' + ICONS.x + ' עדיין לומד: <b>' + learn.length + '</b></span>' +
+      (n - marked.length ? '<span class="stat">בלי סימון: <b>' + (n - marked.length) + '</b></span>' : '') + '</div>' +
+      (learn.length ? '<div class="end-sub">המילים שעוד לא יושבות: <bdi dir="ltr">' + escapeHtml(learn.map(v => v.v1).join(', ')) + '</bdi></div>' : '');
+    $('cardsLearnBtn').textContent = 'לתרגל רק את מה שעוד לא יודע (' + learn.length + ')';
+    $('cardsLearnBtn').classList.toggle('hidden', learn.length === 0);
+    const pct = n ? Math.round(knowN / n * 100) : 0;
+    setRing('cards', pct);
+    if (pct >= 50) confetti(pct >= 90 ? 200 : 110);
+    $('cardsRestartBtn').focus({ preventScroll: true });
+  }
+  function restartCards(list, custom) {
+    cards.list = list; cards.index = 0; cards.marks = new Map(); cards.custom = !!custom;
+    setCardsDone(false); setFlipped(false, true); renderCard();
+    cardEl.focus({ preventScroll: true });
+  }
+  $('cardsRestartBtn').addEventListener('click', () => restartCards(cards.custom ? cards.list : (cards.shuffled ? shuffle(cards.list) : groupVerbs(state.group)), cards.custom));
+  $('cardsLearnBtn').addEventListener('click', () => restartCards(cards.list.filter(v => cards.marks.get(v.v1) === false), true));
+  $('cardsBackBtn').addEventListener('click', () => { setCardsDone(false); cards.index = Math.max(0, cards.list.length - 1); setFlipped(false, true); renderCard(); cardEl.focus({ preventScroll: true }); });
 
   cardEl.addEventListener('click', flipCard);
   $('prevBtn').addEventListener('click', (e) => { e.stopPropagation(); goCard(-1); });
@@ -1805,10 +1871,10 @@
     known[knownKey()].clear(); saveKnown(); renderGroupButtons(); renderCard();
   });
   $('shuffleBtn').addEventListener('click', () => {
-    cards.list = shuffle(cards.list); cards.index = 0; cards.shuffled = true; setFlipped(false, true); renderCard();
+    cards.list = shuffle(cards.list); cards.index = 0; cards.shuffled = true; cards.marks = new Map(); setCardsDone(false); setFlipped(false, true); renderCard();
   });
   $('orderBtn').addEventListener('click', () => {
-    cards.list = groupVerbs(state.group); cards.index = 0; cards.shuffled = false; setFlipped(false, true); renderCard();
+    cards.list = groupVerbs(state.group); cards.index = 0; cards.shuffled = false; cards.custom = false; cards.marks = new Map(); setCardsDone(false); setFlipped(false, true); renderCard();
   });
   $('removeHardBtn').addEventListener('click', () => {
     const v = cards.list[cards.index];
@@ -1816,7 +1882,7 @@
     removeHard(v.v1);
     if (hardSet.size === 0) { selectGroup(0); return; }
     cards.list.splice(cards.index, 1);
-    if (cards.index >= cards.list.length) cards.index = 0;
+    if (cards.index >= cards.list.length) { renderGroupButtons(); finishCards(); return; }
     renderGroupButtons();
     setFlipped(false, true);
     renderCard();
@@ -2094,9 +2160,7 @@
     } else {
       write.fail.push(v);
       write.failSet.add(v.v1);
-      write.queue.push(v);  // re-queue at the end
-      requeued = true;
-      addHard(v);
+      addHard(v); // mistakes are offered afterwards ("practice mistakes"), never re-inserted into this session
     }
     write.history.push({ verb: v, ok: ok, requeued: requeued });
     const fb = $('writeFeedback');
@@ -2138,15 +2202,15 @@
     updateWriteStats();
     $('writePanel').classList.add('hidden');
     $('writeEnd').classList.remove('hidden');
-    const firstTry = write.success.filter(v => !write.failSet.has(v.v1)).length;
+    const firstTry = write.success.length;
     $('writeFinal').textContent = firstTry + ' / ' + write.total;
     $('writeEndNote').textContent = write.failSet.size
-      ? 'הצלחת בניסיון הראשון ב-' + firstTry + ' מילים. ' + write.failSet.size + ' מילים דרשו חזרה (נוספו לרשימת המילים הקשות).'
-      : 'מושלם! כל המילים נכונות בניסיון הראשון 🌟';
+      ? 'כתבת נכון ' + firstTry + ' מתוך ' + write.total + ' מילים. ' + write.failSet.size + ' מילים נוספו לרשימת המילים הקשות, ואפשר לתרגל אותן עכשיו.'
+      : 'מושלם! כל המילים נכונות 🌟';
     $('writeRetryBtn').classList.toggle('hidden', write.failSet.size === 0);
     const wpct = write.total ? Math.round(firstTry / write.total * 100) : 0;
     setRing('write', wpct);
-    confetti(wpct >= 90 ? 220 : 130);
+    if (wpct >= 50) confetti(wpct >= 90 ? 220 : 130);
     $('writeRestartBtn').focus({ preventScroll: true });
   }
 
@@ -2319,14 +2383,32 @@
     $('matchProgress').setAttribute('aria-valuenow', String(pct));
   }
 
-  function startMatch() {
-    stopMatchTimer();
-    const chosen = [];
-    for (const v of shuffle(partVerbs(state.part))) {
-      if (chosen.length >= MATCH_PAIRS) break;
-      if (chosen.some(c => meaningsOverlap(c.he, v.he))) continue; // keep every board unambiguous
-      chosen.push(v);
+  // A match session = the whole scope, shuffled once and split into boards of up to 6 pairs.
+  // Every word appears on exactly one board; after the last board the session ends.
+  function buildBoards(list) {
+    const boards = [];
+    list.forEach(v => {
+      const b = boards.find(bd => bd.length < MATCH_PAIRS && !bd.some(c => meaningsOverlap(c.he, v.he))); // keep every board unambiguous
+      if (b) b.push(v); else boards.push([v]);
+    });
+    if (boards.length > 1 && boards[boards.length - 1].length === 1) { // don't leave a lonely single pair
+      const lone = boards[boards.length - 1][0];
+      const host = boards.slice(0, -1).reverse().find(bd => !bd.some(c => meaningsOverlap(c.he, lone.he)));
+      if (host) { host.push(lone); boards.pop(); }
     }
+    return boards;
+  }
+  function startMatch() {
+    match.boards = buildBoards(shuffle(partVerbs(state.part)));
+    match.board = 0;
+    match.sessionMs = 0;
+    playBoard(match.boards[0] || [], false);
+  }
+  function playBoard(chosen, reshuffleOnly) {
+    stopMatchTimer();
+    match.current = chosen;
+    const nb = match.boards.length;
+    $('matchBoard').textContent = nb > 1 ? 'לוח ' + (match.board + 1) + ' מתוך ' + nb + ' · ' : '';
     match.tiles = shuffle(chosen.flatMap(v => [{ v: v, side: 'en' }, { v: v, side: 'he' }]));
     match.sel = null; match.pairs = chosen.length; match.left = chosen.length;
     match.start = 0; match.penalty = 0; match.done = false; match.busy = false;
@@ -2336,7 +2418,8 @@
     $('matchMsg').className = 'feedback';
     const grid = $('matchGrid');
     grid.innerHTML = '';
-    if (chosen.length < 2) {
+    const totalWords = match.boards.reduce((a, bd) => a + bd.length, 0);
+    if (totalWords < 2) {
       $('matchMsg').textContent = 'צריך לפחות 2 מילים למשחק. בחר חלק או קטגוריה אחרת.';
     }
     match.tiles.forEach((t, i) => {
@@ -2356,7 +2439,7 @@
 
   function clickTile(i, el) {
     const t = match.tiles[i];
-    if (match.done || match.busy || t.matched || match.pairs < 2) return;
+    if (match.done || match.busy || t.matched || match.boards.reduce((a, bd) => a + bd.length, 0) < 2) return;
     if (!match.start) {
       match.start = Date.now();
       match.interval = setInterval(renderMatchStats, 100);
@@ -2400,17 +2483,32 @@
     const isBest = !prev || total < prev;
     if (isBest) { matchBest[key] = total; lsSet(LS_MATCH, matchBest); renderDashboard(); }
     renderMatchStats();
+    match.sessionMs = (match.sessionMs || 0) + total;
+    const nb = match.boards.length, last = match.board >= nb - 1;
+    const totalWords = match.boards.reduce((a, bd) => a + bd.length, 0);
     setTimeout(() => {
       if (state.mode !== 'match' || !match.done) return;
       $('matchPanel').classList.add('hidden');
       $('matchEnd').classList.remove('hidden');
-      $('matchResult').textContent = fmtSec(total) + ' שניות';
-      $('matchEndNote').textContent = isBest ? (prev ? '🏆 שיא חדש! השיא הקודם: ' + fmtSec(prev) + ' שנ׳' : '🏆 זה השיא הראשון שלך בחלק הזה!') : 'השיא שלך: ' + fmtSec(prev) + ' שנ׳. נסה לשבור אותו!';
-      $('matchAgainBtn').focus({ preventScroll: true });
-      confetti(isBest ? 220 : 130);
+      const bestNote = isBest ? (prev ? 'שיא חדש ללוח! השיא הקודם: ' + fmtSec(prev) + ' שנ׳' : 'זה השיא הראשון שלך בחלק הזה!') : 'השיא שלך ללוח: ' + fmtSec(prev) + ' שנ׳';
+      if (last) {
+        $('matchEndTitle').textContent = nb > 1 ? 'סיימת את כל המילים!' : 'כל הכבוד!';
+        $('matchResult').textContent = fmtSec(nb > 1 ? match.sessionMs : total) + ' שניות';
+        $('matchEndNote').innerHTML = (nb > 1 ? '<div class="end-sub">כל ' + totalWords + ' המילים הותאמו, כל מילה פעם אחת, ב-' + nb + ' לוחות.</div>' : escapeHtml(bestNote));
+      } else {
+        $('matchEndTitle').textContent = 'לוח ' + (match.board + 1) + ' מתוך ' + nb + ' הושלם';
+        $('matchResult').textContent = fmtSec(total) + ' שניות';
+        $('matchEndNote').innerHTML = '<div class="end-sub">נותרו עוד ' + (nb - match.board - 1) + ' לוחות עם מילים חדשות.</div>' + escapeHtml(bestNote);
+        $('matchNextBtn').textContent = 'ללוח הבא (' + (match.board + 2) + ' מתוך ' + nb + ')';
+      }
+      $('matchNextBtn').classList.toggle('hidden', last);
+      $('matchAgainBtn').className = last ? 'btn accent' : 'btn ghost';
+      (last ? $('matchAgainBtn') : $('matchNextBtn')).focus({ preventScroll: true });
+      confetti(last ? 220 : (isBest ? 130 : 70));
     }, 450);
   }
-  $('matchShuffleBtn').addEventListener('click', startMatch);
+  $('matchShuffleBtn').addEventListener('click', () => playBoard(match.current || [], true)); // same words, new positions
+  $('matchNextBtn').addEventListener('click', () => { if (match.board < match.boards.length - 1) { match.board++; playBoard(match.boards[match.board], false); } });
   $('matchAgainBtn').addEventListener('click', startMatch);
 
   // ---------- GLOBAL KEYBOARD ----------
@@ -2421,6 +2519,7 @@
     const tag = t && t.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     if (isStudy()) {
+      if (cards.done) return;
       const inCardControls = t && t.closest && (t.closest('#cardControls') || t.closest('.sort-row') || t === cardEl);
       if (e.key === ' ' || e.key === 'Enter') {
         if (tag === 'BUTTON' && !inCardControls) return; // let other buttons work natively
