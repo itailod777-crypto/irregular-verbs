@@ -1827,16 +1827,20 @@
   }
   function finishCards() {
     const n = cards.list.length;
-    const marked = cards.list.filter(v => cards.marks.has(v.v1));
-    const knowN = marked.filter(v => cards.marks.get(v.v1)).length;
-    const learn = cards.list.filter(v => cards.marks.get(v.v1) === false);
+    // Final state of every word, from the same saved "known" set the progress line uses,
+    // so the summary and the line always agree and known + still-learning + unmarked = total.
+    const kset = known[knownKey()];
+    const knowN = cards.list.filter(v => kset.has(v.v1)).length;
+    const learn = cards.list.filter(v => !kset.has(v.v1) && cards.marks.get(v.v1) === false);
+    const unmarked = n - knowN - learn.length;
     setFlipped(false, true);
+    renderCard(); // refresh the progress line (the last mark jumps straight here)
     setCardsDone(true);
     const what = cards.custom ? 'סיימת את המילים לתרגול!' : state.group === 'all' ? 'סיימת את כל הכרטיסיות!' : state.group === 'hard' ? 'סיימת את המילים הקשות!' : 'סיימת את קבוצה ' + (state.group + 1) + '!';
     $('cardsEndTitle').textContent = what;
     $('cardsEndNote').innerHTML = '<div class="end-sub">עברת על ' + n + ' כרטיסיות, כל אחת פעם אחת.</div>' +
       '<div class="cards-end-counts"><span class="stat stat-ok">' + ICONS.check + ' אני יודע: <b>' + knowN + '</b></span><span class="stat stat-bad">' + ICONS.x + ' עדיין לומד: <b>' + learn.length + '</b></span>' +
-      (n - marked.length ? '<span class="stat">בלי סימון: <b>' + (n - marked.length) + '</b></span>' : '') + '</div>' +
+      (unmarked ? '<span class="stat">בלי סימון: <b>' + unmarked + '</b></span>' : '') + '</div>' +
       (learn.length ? '<div class="end-sub">המילים שעוד לא יושבות: <bdi dir="ltr">' + escapeHtml(learn.map(v => v.v1).join(', ')) + '</bdi></div>' : '');
     $('cardsLearnBtn').textContent = 'לתרגל רק את מה שעוד לא יודע (' + learn.length + ')';
     $('cardsLearnBtn').classList.toggle('hidden', learn.length === 0);
