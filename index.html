@@ -844,6 +844,10 @@
     .master-inputs .field { max-width: 100%; flex: 1 1 100%; }
     .tabbar .mode-btn { font-size: 10px; padding: 6px 0; }
   }
+
+  .dict-he-cue { margin: 2px 0 4px; font-size: 18px; font-weight: 600; color: var(--ink, var(--text)); letter-spacing: .01em; min-height: 1.3em; }
+  .dict-he-cue b { font-weight: 800; color: var(--accent-ink); }
+  .dict-he-cue.hidden { display: none; }
 </style>
 </head>
 <body>
@@ -1061,6 +1065,7 @@
       <div class="dict-player">
         <button id="dictPlayBtn" class="dict-play" aria-label="השמע את הפועל"><span class="dict-wave" aria-hidden="true"></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg></button>
         <div id="dictPlayLabel" class="dict-play-label">לחצו כדי לשמוע</div>
+        <div id="dictHe" class="dict-he-cue" aria-live="polite"></div>
         <div class="dict-tools">
           <button id="dictSlowBtn" class="small-btn dict-tool"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 1.5M10 3h4"/></svg>לאט יותר</button>
           <button id="dictHintBtn" class="small-btn dict-tool"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></svg>הצג את המילה (רמז)</button>
@@ -2337,10 +2342,16 @@
     if (show && v) { el.innerHTML = '<bdi dir="ltr">' + escapeHtml(v.v1) + '</bdi>'; el.classList.remove('hidden'); }
     else { el.textContent = ''; el.classList.add('hidden'); }
   }
+  function setDictHe(v) {
+    const el = $('dictHe');
+    if (v) { el.innerHTML = 'בעברית: <b>' + escapeHtml(v.he) + '</b>'; el.classList.remove('hidden'); }
+    else { el.textContent = ''; el.classList.add('hidden'); }
+  }
   function showDict(initial) {
     const v = dictVerb();
     dict.checked = false; dict.hinted = false; dict.played = false;
     $('dictScore').textContent = v ? dictScoreText() : 'אין מילים בחלק זה';
+    setDictHe(v);
     dictV2.value = ''; dictV3.value = '';
     dictV2.className = ''; dictV3.className = '';
     dictV2.readOnly = dictV3.readOnly = false;
