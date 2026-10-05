@@ -809,14 +809,16 @@
     .dict-instr .nowrap { white-space: nowrap; }
   }
   @media (min-width: 601px) {
-    .tabbar .mode-btn { padding: 10px 8px; gap: 6px; font-size: 14px; }
-    .tabbar { gap: 2px; }
+    .tabbar { gap: 2px; justify-content: space-between; }
+    .tabbar .mode-btn { flex: 1 1 0; min-width: 0; justify-content: center; padding: 10px 6px; gap: 5px; font-size: 13.5px; }
   }
-  @media (min-width: 601px) and (max-width: 960px) {
-    .tabbar { justify-content: space-between; }
-    .tabbar .mode-btn { flex: 1 1 0; min-width: 0; justify-content: center; padding: 9px 4px; gap: 5px; font-size: 13px; }
+  @media (min-width: 601px) and (max-width: 1100px) {
     .tabbar .tab-lbl { display: none; }
-    .tabbar .tab-short { display: block; white-space: nowrap; }
+    .tabbar .tab-short { display: block; white-space: nowrap; font-size: 12.5px; }
+    .tabbar .mode-btn { padding: 9px 3px; font-size: 12.5px; }
+  }
+  @media (min-width: 1101px) {
+    .tabbar .mode-btn { padding: 10px 7px; font-size: 13.5px; gap: 6px; }
   }
 
   /* ---------- v9: end-of-session screens ---------- */
@@ -826,6 +828,22 @@
   .cards-end-note .end-sub bdi { font-weight: 700; color: var(--text); }
   .match-board { font-weight: 700; color: var(--accent-ink); }
   #matchEnd .exam-actions { flex-wrap: wrap; }
+
+  /* ---------- v10: mastery mode ---------- */
+  :root { --indigo: #4f46e5; --indigo-soft: #eef2ff; --indigo-ink: #3730a3; }
+  html[data-theme="dark"] { --indigo: #818cf8; --indigo-soft: #1e1b4b; --indigo-ink: #c7d2fe; }
+  body[data-mode="master"] { --accent: var(--indigo); --accent-soft: var(--indigo-soft); --accent-ink: var(--indigo-ink); --accent-2: #7c3aed; }
+  .mode-btn[data-mode="master"].active { background: var(--indigo); }
+  .master-reset { margin-inline-start: auto; font-size: 13px; }
+  .stats .master-reset { align-self: center; }
+  #masterSection .stats { flex-wrap: wrap; gap: 8px 12px; }
+  .master-inputs { flex-wrap: wrap; }
+  .master-inputs .field { flex: 1 1 140px; max-width: 200px; }
+  #masterSection .field input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); }
+  @media (max-width: 600px) {
+    .master-inputs .field { max-width: 100%; flex: 1 1 100%; }
+    .tabbar .mode-btn { font-size: 10px; padding: 6px 0; }
+  }
 </style>
 </head>
 <body>
@@ -847,6 +865,7 @@
       <li><b>ממיינים.</b> אחרי כל כרטיסייה לוחצים "אני יודע" או "עדיין לומד". מילים ב"עדיין לומד" נכנסות ל"מילים קשות".</li>
       <li><b>בוחנים את עצמכם.</b> בחינה אמריקאית, בחינת תרגום, בחינת כתיבה ומשחק התאמה. אפשר לבחור חלק, קטגוריה או מילים קשות.</li>
       <li><b>הכתבה.</b> שומעים את הפועל באנגלית בלי לראות אותו, וכותבים את צורות ה-V2 וה-V3. אפשר להשמיע שוב, לאט יותר, או להציג את המילה כרמז.</li>
+      <li><b>שליטה.</b> שומעים פועל וכותבים את שלוש הצורות. מילה נכונה נעלמת מהתור; טעות חוזרת עד שמצליחים בכל המילים בחלק. ההתקדמות נשמרת.</li>
       <li><b>חוזרים על הקשות.</b> כל טעות נשמרת. כדאי לחזור עליהן מחר.</li>
     </ol>
     <h3>קיצורי מקלדת</h3>
@@ -875,7 +894,7 @@
       <div class="hero-text">
         <h1><span class="grad-text ltr">Irregular Verbs</span><span class="he-title">פעלים בלתי רגילים</span></h1>
         <p class="subtitle">כרטיסיות לימוד, בחינה אמריקאית, או מבחן כתיבה עצמי</p>
-        <div class="hero-chips"><span class="hero-chip"><b>68</b> פעלים</span><span class="hero-chip"><b>7</b> דפוסים</span><span class="hero-chip"><b>6</b> דרכים לתרגל</span></div>
+        <div class="hero-chips"><span class="hero-chip"><b>68</b> פעלים</span><span class="hero-chip"><b>7</b> דפוסים</span><span class="hero-chip"><b>8</b> דרכים לתרגל</span></div>
       </div>
       <div class="hero-actions">
         <button id="helpBtn" class="icon-btn" aria-label="איך לומדים? עזרה וקיצורי מקלדת" title="איך לומדים?" aria-haspopup="dialog"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.8"/><circle cx="12" cy="17" r=".6" fill="currentColor"/></svg></button>
@@ -899,6 +918,7 @@
     <button class="mode-btn" data-mode="tquiz" aria-pressed="false" aria-label="בחינת תרגום"><span class="tab-ico"><svg class="" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v9a1.5 1.5 0 0 1-1.5 1.5H10l-4.5 4v-4h0A1.5 1.5 0 0 1 4 14.5z"/><path d="M8.7 10.2l2.1 2.1 4.4-4.4"/></svg></span><span class="tab-lbl">בחינת תרגום</span><span class="tab-short">מבחן תרגום</span></button>
     <button class="mode-btn" data-mode="write" aria-pressed="false" aria-label="בחינת כתיבה עצמית"><span class="tab-ico"><svg class="" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1-4.2L16.3 4.5a2 2 0 0 1 2.9 0l.3.3a2 2 0 0 1 0 2.9L8.2 19z"/><path d="M14.5 6.3l3.2 3.2"/><path d="M13 20h7"/></svg></span><span class="tab-lbl">בחינת כתיבה</span><span class="tab-short">כתיבה</span></button>
     <button class="mode-btn" data-mode="dict" aria-pressed="false" aria-label="הכתבה"><span class="tab-ico"><svg class="" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3.5" y="13.5" width="4.5" height="7" rx="2"/><rect x="16" y="13.5" width="4.5" height="7" rx="2"/></svg></span><span class="tab-lbl">הכתבה</span><span class="tab-short">הכתבה</span></button>
+    <button class="mode-btn" data-mode="master" aria-pressed="false" aria-label="שליטה"><span class="tab-ico"><svg class="" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.2 12.3l2.6 2.6 5-5"/></svg></span><span class="tab-lbl">שליטה</span><span class="tab-short">שליטה</span></button>
     <button class="mode-btn" data-mode="match" aria-pressed="false" aria-label="משחק התאמה"><span class="tab-ico"><svg class="" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><path d="M14.5 17l2 2 3.5-3.5"/></svg></span><span class="tab-lbl">משחק התאמה</span><span class="tab-short">התאמה</span></button>
   </nav>
   <p id="modeDesc" class="mode-desc" aria-live="polite"></p>
@@ -1077,6 +1097,60 @@
     </div>
   </section>
 
+
+  <!-- MASTERY: listen to V1, type V1+V2+V3, wrong words keep coming until all correct -->
+  <section id="masterSection" class="section" aria-label="שליטה">
+    <div class="stats" aria-live="polite">
+      <span class="stat stat-ok"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg> השגתי: <b id="masterDone">0</b></span>
+      <span class="stat">נשארו: <b id="masterLeft">0</b></span>
+      <button id="masterResetBtn" class="link-btn master-reset" type="button">איפוס · בחון שוב את כולם</button>
+    </div>
+    <div id="masterProgress" class="progress" role="progressbar" aria-label="התקדמות בשליטה" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div></div></div>
+    <div id="masterPanel" class="panel master-panel">
+      <div id="masterScore" class="score-line"></div>
+      <p class="dict-instr">מקשיבים לפועל וכותבים את <span class="nowrap">שלוש הצורות</span>. מילה נכונה נעלמת; טעות חוזרת עד שמצליחים בכל המילים.</p>
+      <div class="dict-player">
+        <button id="masterPlayBtn" class="dict-play" aria-label="השמע את הפועל"><span class="dict-wave" aria-hidden="true"></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg></button>
+        <div id="masterPlayLabel" class="dict-play-label">לחצו כדי לשמוע</div>
+        <div class="dict-tools">
+          <button id="masterSlowBtn" class="small-btn dict-tool"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 1.5M10 3h4"/></svg>לאט יותר</button>
+          <button id="masterHintBtn" class="small-btn dict-tool"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></svg>הצג את המילה (רמז)</button>
+        </div>
+        <div id="masterWord" class="dict-word hidden" aria-live="polite"></div>
+        <div id="masterNoSpeech" class="dict-nospeech hidden" role="status">הדפדפן הזה לא יכול להשמיע קול, לכן המילה מוצגת על המסך.</div>
+      </div>
+      <div class="inputs master-inputs">
+        <div class="field">
+          <label for="masterV1">Base (V1)</label>
+          <input id="masterV1" type="text" dir="ltr" enterkeyhint="next" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="צורת בסיס V1">
+        </div>
+        <div class="field">
+          <label for="masterV2">Past (V2)</label>
+          <input id="masterV2" type="text" dir="ltr" enterkeyhint="next" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="צורת עבר V2">
+        </div>
+        <div class="field">
+          <label for="masterV3">Participle (V3)</label>
+          <input id="masterV3" type="text" dir="ltr" enterkeyhint="done" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="צורת V3">
+        </div>
+      </div>
+      <div id="masterFeedback" class="feedback" aria-live="polite"></div>
+      <div class="exam-actions">
+        <button id="masterCheckBtn" class="btn accent">בדיקה (Enter)</button>
+        <button id="masterSpeakAllBtn" class="btn green hidden" aria-label="השמע את שלוש הצורות"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>השמע את שלוש הצורות</button>
+        <button id="masterNextBtn" class="btn accent hidden">הבא (Enter)<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+      </div>
+    </div>
+    <div id="masterEnd" class="panel end hidden" aria-live="polite">
+      <h2 class="end-title"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg> <span id="masterEndTitle">שליטה מלאה!</span></h2>
+      <div class="ring" aria-hidden="true"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="54"></circle><circle id="masterRingBar" class="bar" cx="60" cy="60" r="54"></circle></svg><div id="masterRingVal" class="ring-val">0%</div></div>
+      <div id="masterFinal" class="big-score"></div>
+      <div id="masterEndNote"></div>
+      <div class="exam-actions">
+        <button id="masterAgainBtn" class="btn accent">בחון שוב את כולם</button>
+      </div>
+    </div>
+  </section>
+
   <!-- WRITING -->
   <section id="writeSection" class="section" aria-label="בחינת כתיבה עצמית">
     <div class="stats" aria-live="polite">
@@ -1191,7 +1265,7 @@
   const verbByV1 = new Map(allVerbs.map(v => [v.v1, v]));
   const PART_CHOICES = [2, 3, 4, 5, 6, 7, 8, 10];
   const POINTS = 5; // points per correct answer in the multiple-choice quizzes
-  const MODES = ['cards', 'trans', 'quiz', 'tquiz', 'write', 'dict', 'match'];
+  const MODES = ['cards', 'trans', 'quiz', 'tquiz', 'write', 'dict', 'master', 'match'];
   const STUDY = ['cards', 'trans'];
 
   // ---------- STORAGE ----------
@@ -1199,6 +1273,7 @@
   const LS_HARD = 'irregularVerbs.hard.v1';
   const LS_KNOWN = 'irregularVerbs.known.v1';
   const LS_MATCH = 'irregularVerbs.matchBest.v1';
+  const LS_MASTERED = 'irregularVerbs.mastered.v1';
   const LS_HOWTO = 'irregularVerbs.howtoClosed';
   function lsGet(key, fallback) {
     try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; }
@@ -1211,6 +1286,8 @@
   const knownRaw = lsGet(LS_KNOWN, {}) || {};
   const known = { forms: new Set(validV1(knownRaw.forms)), trans: new Set(validV1(knownRaw.trans)) };
   const matchBest = lsGet(LS_MATCH, {}) || {};
+  const masteredSet = new Set(validV1(lsGet(LS_MASTERED, [])));
+  function saveMastered() { lsSet(LS_MASTERED, Array.from(masteredSet)); }
 
   const isGroupVal = (g) => Number.isInteger(g) && g >= 0 && g < groups.length;
   const savedParts = PART_CHOICES.includes(saved.parts) ? saved.parts : 5;
@@ -1422,6 +1499,7 @@
     tquiz: 'רואים פועל ובוחרים את התרגום הנכון מתוך 4 תשובות.',
     write: 'כותבים לבד את צורות ה-V2 וה-V3. כל מילה מופיעה פעם אחת, ובסוף אפשר לתרגל את הטעויות.',
     dict: 'שומעים פועל באנגלית (בלי לראות אותו) וכותבים את צורות ה-V2 וה-V3.',
+    master: 'שומעים פועל וכותבים את שלוש הצורות. מילה נכונה נעלמת; טעות חוזרת עד שמצליחים בכל המילים בחלק.',
     match: 'מתאימים כל פועל באנגלית לתרגום שלו, מהר ככל האפשר.'
   };
   let modeReady = false;
@@ -1444,17 +1522,18 @@
     $('partBox').classList.toggle('hidden', study);
     $('dirBox').classList.toggle('hidden', !(mode === 'trans' || mode === 'tquiz'));
     renderDir();
-    ['cardsSection', 'quizSection', 'writeSection', 'dictSection', 'matchSection'].forEach(id => $(id).classList.remove('show'));
+    ['cardsSection', 'quizSection', 'writeSection', 'dictSection', 'masterSection', 'matchSection'].forEach(id => $(id).classList.remove('show'));
     void document.body.offsetWidth; // restart the staggered entrance
     const desc = $('modeDesc'); desc.classList.remove('swap'); void desc.offsetWidth; desc.classList.add('swap');
     $('cardsSection').classList.toggle('show', study);
     $('quizSection').classList.toggle('show', mode === 'quiz' || mode === 'tquiz');
     $('writeSection').classList.toggle('show', mode === 'write');
     $('dictSection').classList.toggle('show', mode === 'dict');
+    $('masterSection').classList.toggle('show', mode === 'master');
     $('matchSection').classList.toggle('show', mode === 'match');
     clearQuizTimer();
     stopMatchTimer();
-    if (mode !== 'dict') stopSpeech();
+    if (mode !== 'dict' && mode !== 'master') stopSpeech();
     if (study) { renderGroupButtons(); selectGroup(state.group, STUDY.includes(prevMode)); animateIn($('groupButtons')); }
     else {
       renderPartButtons();
@@ -1463,6 +1542,7 @@
       if (mode === 'quiz' || mode === 'tquiz') startQuiz();
       else if (mode === 'write') startWrite();
       else if (mode === 'dict') startDict();
+      else if (mode === 'master') startMaster();
       else startMatch();
     }
   }
@@ -1653,7 +1733,7 @@
 
   function selectPart(value, force) {
     if (value === 'hard' && hardSet.size === 0) value = 'all';
-    if (!force && value === state.part) { renderPartButtons(); return; } // same scope again: don't reshuffle / restart
+    if (!force && value === state.part) { renderPartButtons(); if (state.mode === 'master' && $('masterEnd') && !$('masterEnd').classList.contains('hidden')) startMaster(); return; } // same scope: keep session, but refresh an empty mastery end screen
     state.part = value;
     saveState();
     renderPartButtons();
@@ -1661,6 +1741,7 @@
     if (state.mode === 'quiz' || state.mode === 'tquiz') startQuiz();
     else if (state.mode === 'write') startWrite();
     else if (state.mode === 'dict') startDict();
+    else if (state.mode === 'master') startMaster();
     else if (state.mode === 'match') startMatch();
   }
 
@@ -2369,6 +2450,189 @@
     if (dict.checked) nextDict(); else checkDict();
   });
 
+  // ---------- MASTERY (listen V1, type V1+V2+V3; wrong words keep returning until all correct) ----------
+  // Persistence: a global set of mastered V1s for THIS mode only (irregularVerbs.mastered.v1).
+  // Changing scope filters that set; Reset clears mastery for the current scope and rebuilds the queue.
+  const master = { queue: [], scope: [], current: null, checked: false, hinted: false, played: false, sessionOk: 0, attempts: 0, lastOk: false };
+  const masterV1 = $('masterV1'), masterV2 = $('masterV2'), masterV3 = $('masterV3');
+  function masterScopeKey() { return Number.isInteger(state.part) ? 'p' + state.parts + ':' + state.part : String(state.part); }
+  function masterVerb() { return master.current; }
+  function buildMasterQueue(verbs, keepMastered) {
+    const scope = (verbs || partVerbs(state.part)).slice();
+    master.scope = scope;
+    const q = keepMastered ? scope.slice() : scope.filter(v => !masteredSet.has(v.v1));
+    return shuffle(q);
+  }
+  function startMaster(verbs, opts) {
+    const o = opts || {};
+    master.queue = buildMasterQueue(verbs, !!o.reset);
+    master.current = null; master.checked = false; master.hinted = false; master.played = false;
+    master.sessionOk = 0; master.attempts = 0; master.lastOk = false;
+    $('masterNoSpeech').classList.toggle('hidden', canSpeak());
+    if (!master.queue.length) { showMasterEnd(true); return; }
+    $('masterPanel').classList.remove('hidden');
+    $('masterEnd').classList.add('hidden');
+    nextMaster(true);
+  }
+  function updateMasterStats() {
+    // Remaining = words still in the queue + the current word if it is not yet mastered.
+    let rem = master.queue.length;
+    if (master.current && !master.checked) rem += 1;
+    if (master.current && master.checked && !master.lastOk) rem += 1; // re-queued on Next
+    $('masterLeft').textContent = String(rem);
+    $('masterDone').textContent = String(master.sessionOk);
+    const total = master.scope.length || 1;
+    const doneAll = master.scope.filter(v => masteredSet.has(v.v1)).length;
+    const pct = Math.round(doneAll / total * 100);
+    $('masterProgress').firstElementChild.style.width = pct + '%';
+    $('masterProgress').setAttribute('aria-valuenow', String(pct));
+    $('masterScore').textContent = rem
+      ? 'נשארו ' + rem + ' מילים · השגתי ' + master.sessionOk + ' בסשן הזה'
+      : 'סיימת את כל המילים בחלק';
+  }
+  function setMasterWord(show) {
+    const v = masterVerb(), el = $('masterWord');
+    if (show && v) { el.innerHTML = '<bdi dir="ltr">' + escapeHtml(v.v1) + '</bdi>'; el.classList.remove('hidden'); }
+    else { el.textContent = ''; el.classList.add('hidden'); }
+  }
+  function showMaster() {
+    const v = master.current;
+    master.checked = false; master.hinted = false; master.played = false; master.lastOk = false;
+    [masterV1, masterV2, masterV3].forEach(inp => { inp.value = ''; inp.className = ''; inp.readOnly = false; inp.disabled = !v; });
+    $('masterFeedback').innerHTML = ''; $('masterFeedback').className = 'feedback';
+    $('masterCheckBtn').classList.toggle('hidden', !v);
+    $('masterSpeakAllBtn').classList.add('hidden');
+    $('masterNextBtn').classList.add('hidden');
+    const speech = canSpeak();
+    ['masterPlayBtn', 'masterSlowBtn'].forEach(id => { $(id).disabled = !v || !speech; });
+    $('masterHintBtn').disabled = !v; $('masterHintBtn').classList.toggle('hidden', !speech);
+    $('masterPlayBtn').classList.remove('playing');
+    setMasterWord(!speech);
+    $('masterPlayLabel').textContent = speech ? 'לחצו כדי לשמוע' : 'ההשמעה לא זמינה';
+    updateMasterStats();
+    if (!v) return;
+    const activated = !navigator.userActivation || navigator.userActivation.hasBeenActive;
+    if (speech && activated && state.mode === 'master') setTimeout(() => { if (masterVerb() === v && !master.played && state.mode === 'master') playMaster(false); }, 200);
+    $('masterPlayBtn').classList.toggle('nudge', speech && !activated);
+    const fine = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
+    if (fine || document.activeElement === document.body) masterV1.focus({ preventScroll: true });
+  }
+  // Before answering this only ever says V1.
+  function playMaster(slow) {
+    const v = masterVerb();
+    if (!v) return;
+    master.played = true;
+    $('masterPlayBtn').classList.remove('nudge');
+    const btn = $('masterPlayBtn'), lbl = $('masterPlayLabel');
+    const ok = speakText(primary(v.v1), slow ? DICT_SLOW : DICT_RATE, (ev) => {
+      if (masterVerb() !== v) return;
+      btn.classList.toggle('playing', ev === 'start');
+      lbl.textContent = ev === 'start' ? (slow ? 'משמיע לאט…' : 'משמיע…') : 'לחצו כדי לשמוע שוב';
+    });
+    if (!ok) { $('masterNoSpeech').classList.remove('hidden'); setMasterWord(true); }
+  }
+  function hintMaster() {
+    if (!masterVerb() || master.checked || master.hinted) return;
+    master.hinted = true;
+    setMasterWord(true);
+    $('masterHintBtn').disabled = true;
+  }
+  function checkMaster() {
+    const v = masterVerb();
+    if (!v || master.checked) return;
+    const ok1 = isCorrect(masterV1.value, v.v1), ok2 = isCorrect(masterV2.value, v.v2), ok3 = isCorrect(masterV3.value, v.v3);
+    const ok = ok1 && ok2 && ok3;
+    master.checked = true; master.lastOk = ok; master.attempts++;
+    masterV1.classList.add(ok1 ? 'ok' : 'bad');
+    masterV2.classList.add(ok2 ? 'ok' : 'bad');
+    masterV3.classList.add(ok3 ? 'ok' : 'bad');
+    [masterV1, masterV2, masterV3].forEach(inp => { inp.readOnly = true; });
+    if (ok) {
+      master.sessionOk++;
+      masteredSet.add(v.v1);
+      saveMastered();
+      // word is removed from the active queue (it was already shifted into current)
+    } else {
+      addHard(v);
+    }
+    setMasterWord(false);
+    $('masterHintBtn').disabled = true;
+    const head = ok
+      ? ICONS.check + ' מצוין! המילה נעלמת מהתור' + (master.hinted ? ' <span class="dict-hinted">(עם רמז)</span>' : '')
+      : ICONS.x + ' לא מדויק — המילה תחזור. התשובה הנכונה:';
+    $('masterFeedback').innerHTML = '<div class="dict-fb-head">' + head + '</div>' +
+      '<div class="dict-reveal"><bdi class="dict-forms" dir="ltr">' + hlForm(v, 'v1') + ' – ' + hlForm(v, 'v2') + ' – ' + hlForm(v, 'v3') + '</bdi>' +
+      '<div class="dict-he">' + escapeHtml(v.he) + '</div>' +
+      (ok ? '' : '<div class="fb-hint">' + ICONS.bulb + ' ' + groups[v.g].rule + '</div>') + '</div>';
+    $('masterFeedback').className = 'feedback ' + (ok ? 'ok' : 'bad');
+    if (ok) confetti(28, centerOf(masterV3));
+    $('masterCheckBtn').classList.add('hidden');
+    $('masterSpeakAllBtn').classList.toggle('hidden', !canSpeak());
+    $('masterNextBtn').classList.remove('hidden');
+    updateMasterStats();
+    $('masterNextBtn').focus({ preventScroll: true });
+  }
+  function nextMaster(initial) {
+    if (!initial && !master.checked) return;
+    stopSpeech();
+    if (!initial && master.current) {
+      if (!master.lastOk) master.queue.push(master.current); // re-queue wrong word at the end
+      master.current = null;
+    }
+    if (!master.queue.length) { showMasterEnd(false); return; }
+    master.current = master.queue.shift();
+    $('masterPanel').classList.remove('hidden');
+    $('masterEnd').classList.add('hidden');
+    showMaster();
+  }
+  function showMasterEnd(already) {
+    stopSpeech();
+    master.current = null;
+    updateMasterStats();
+    $('masterPanel').classList.add('hidden');
+    $('masterEnd').classList.remove('hidden');
+    const n = master.scope.length;
+    $('masterEndTitle').textContent = already ? 'כבר שלטת בכל המילים בחלק!' : 'שליטה מלאה!';
+    $('masterFinal').textContent = n + ' / ' + n;
+    $('masterEndNote').innerHTML = already
+      ? '<div class="end-sub">כל ' + n + ' המילים בחלק כבר מסומנות כנשלטות. לחצו על «בחון שוב את כולם» כדי לאפס ולהתחיל מחדש.</div>'
+      : '<div class="end-sub">כל ' + n + ' המילים נכונות! מילה נעלמה מהתור רק אחרי תשובה מדויקת.</div>' +
+        (master.attempts > n ? '<div class="end-sub">הצליחו אחרי ' + master.attempts + ' ניסיונות בסך הכול.</div>' : '');
+    setRing('master', 100);
+    confetti(already ? 80 : 220);
+    $('masterAgainBtn').focus({ preventScroll: true });
+  }
+  function resetMasterScope() {
+    // Clear mastery for the CURRENT scope only; other scopes keep their progress.
+    const scope = partVerbs(state.part);
+    scope.forEach(v => masteredSet.delete(v.v1));
+    saveMastered();
+    startMaster(scope, { reset: true });
+  }
+  $('masterPlayBtn').addEventListener('click', () => playMaster(false));
+  $('masterSlowBtn').addEventListener('click', () => playMaster(true));
+  $('masterHintBtn').addEventListener('click', hintMaster);
+  $('masterCheckBtn').addEventListener('click', checkMaster);
+  $('masterNextBtn').addEventListener('click', () => nextMaster(false));
+  $('masterSpeakAllBtn').addEventListener('click', () => { const v = masterVerb(); if (v && master.checked) speakVerb(v); });
+  $('masterAgainBtn').addEventListener('click', resetMasterScope);
+  $('masterResetBtn').addEventListener('click', () => {
+    if (!window.confirm('לאפס את השליטה בחלק הזה ולבחון שוב את כל המילים?')) return;
+    resetMasterScope();
+  });
+  function bindMasterEnter(inp, next) {
+    inp.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault(); e.stopPropagation();
+      if (master.checked) nextMaster(false);
+      else if (next && !next.value.trim()) next.focus();
+      else checkMaster();
+    });
+  }
+  bindMasterEnter(masterV1, masterV2);
+  bindMasterEnter(masterV2, masterV3);
+  bindMasterEnter(masterV3, null);
+
   // ---------- MATCH GAME ----------
   const MATCH_PAIRS = 6;
   const match = { tiles: [], sel: null, left: 0, pairs: 0, start: 0, penalty: 0, interval: null, done: false, busy: false };
@@ -2542,6 +2806,10 @@
       if ($('dictPanel').classList.contains('hidden')) return;
       if (e.key === 'Enter' && tag !== 'BUTTON' && dict.checked) { e.preventDefault(); nextDict(); }
       else if (e.key === 's' || e.key === 'S' || e.key === 'ד') { e.preventDefault(); playDict(false); }
+    } else if (state.mode === 'master') {
+      if ($('masterPanel').classList.contains('hidden')) return;
+      if (e.key === 'Enter' && tag !== 'BUTTON' && master.checked) { e.preventDefault(); nextMaster(); }
+      else if (e.key === 's' || e.key === 'S' || e.key === 'ד') { e.preventDefault(); playMaster(false); }
     } else if (state.mode === 'write') {
       if (e.key === 'Enter' && tag !== 'BUTTON' && write.current) {
         e.preventDefault();
@@ -2553,7 +2821,7 @@
 
   // ---------- DASHBOARD ----------
   const LS_DAYS = 'irregularVerbs.days.v1';
-  const MODE_NAMES = { cards: 'שלוש הצורות', trans: 'תרגום', quiz: 'בחינה אמריקאית', tquiz: 'בחינת תרגום', write: 'בחינת כתיבה', dict: 'הכתבה', match: 'משחק התאמה' };
+  const MODE_NAMES = { cards: 'שלוש הצורות', trans: 'תרגום', quiz: 'בחינה אמריקאית', tquiz: 'בחינת תרגום', write: 'בחינת כתיבה', dict: 'הכתבה', master: 'שליטה', match: 'משחק התאמה' };
   function dayStr(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   const studyDays = (() => {
     const days = new Set((lsGet(LS_DAYS, []) || []).filter(x => typeof x === 'string'));
@@ -2616,6 +2884,7 @@
     const target = isStudy() ? cardEl
       : state.mode === 'write' ? inV2
       : state.mode === 'dict' ? ($('dictPanel').classList.contains('hidden') ? $('dictRestartBtn') : dictV2)
+      : state.mode === 'master' ? ($('masterPanel').classList.contains('hidden') ? $('masterAgainBtn') : masterV1)
       : state.mode === 'match' ? document.querySelector('.tile:not(:disabled)')
       : document.querySelector('#quizOptions .opt:not(:disabled)');
     if (target) setTimeout(() => target.focus({ preventScroll: true }), reduceMotion() ? 0 : 350);
