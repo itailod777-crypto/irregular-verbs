@@ -1,5 +1,16 @@
 {
   "name": "itai-mods",
-  "owner": { "name": "itailod777-crypto" },
-  "plugins": [{ "name": "done-notify", "source": "./mods/done-notify" }]
+  "owner": {
+    "name": "itailod777-crypto"
+  },
+  "plugins": [
+    {
+      "name": "done-notify",
+      "source": "./mods/done-notify"
+    },
+    {
+      "name": "work-timer",
+      "source": "./mods/work-timer"
+    }
+  ]
 }
