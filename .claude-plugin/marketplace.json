@@ -1,0 +1,5 @@
+{
+  "name": "itai-mods",
+  "owner": { "name": "itailod777-crypto" },
+  "plugins": [{ "name": "done-notify", "source": "./mods/done-notify" }]
+}
