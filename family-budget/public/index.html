@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>תקציב המשפחה</title>
+<meta name="description" content="ניהול הוצאות והכנסות משפחתי - פועל מקומית על המחשב בלבד">
+<meta name="theme-color" content="#1c5cab">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="topbar-in">
+      <div class="brand"><span class="brand-mark" id="brand-mark"></span><span>תקציב המשפחה</span></div>
+      <div class="spacer"></div>
+      <div class="month-pick" role="group" aria-label="בחירת חודש">
+        <button class="btn icon" id="m-prev" title="חודש קודם" aria-label="חודש קודם"></button>
+        <strong id="m-label" aria-live="polite"></strong>
+        <button class="btn icon" id="m-next" title="חודש הבא" aria-label="חודש הבא"></button>
+      </div>
+      <button class="btn primary" id="sync-btn"></button>
+      <button class="btn icon" id="theme-btn" title="מצב תצוגה (אוטומטי / כהה / בהיר)" aria-label="החלפת מצב תצוגה"></button>
+    </div>
+    <nav class="tabs" id="tabs" aria-label="ניווט ראשי"></nav>
+  </header>
+  <div id="banners"></div>
+  <main id="view" tabindex="-1"></main>
+</div>
+<div id="toasts" aria-live="polite"></div>
+<script src="/common.js"></script>
+<script src="/charts.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
