@@ -6,3 +6,4 @@ data-demo/
 master.key
 .env
 dist/
+*.zip
