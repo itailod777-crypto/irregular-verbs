@@ -158,8 +158,8 @@ function createApp({ db, vault, port, createScraperImpl }) {
     } catch (e) { db.exec('ROLLBACK'); throw e; }
     res.json({ ok: true });
   }));
-  app.get('/api/recurring', wrap((req, res) => { need(store.MONTH_RE.test(String(req.query.month)), 'חודש לא תקין'); res.json(recurring.recurringPage(db, req.query.month)); }));
-  app.get('/api/onetime', wrap((req, res) => { need(store.MONTH_RE.test(String(req.query.month)), 'חודש לא תקין'); res.json(recurring.oneTimePage(db, req.query.month)); }));
+  app.get('/api/recurring', wrap((req, res) => { need(store.MONTH_RE.test(String(req.query.month)), 'חודש לא תקין'); res.json(recurring.recurringPage(db, req.query.month, accQ(req))); }));
+  app.get('/api/onetime', wrap((req, res) => { need(store.MONTH_RE.test(String(req.query.month)), 'חודש לא תקין'); res.json(recurring.oneTimePage(db, req.query.month, accQ(req))); }));
   app.put('/api/recurring/override', wrap((req, res) => {
     const v = req.body.recurring;
     need(v === null || typeof v === 'boolean', 'ערך לא תקין');
@@ -233,7 +233,15 @@ function createApp({ db, vault, port, createScraperImpl }) {
   }));
 
   // ---- סיכומים והגדרות ----
-  app.get('/api/summary', wrap((req, res) => res.json(store.summary(db, String(req.query.month)))));
+  const accQ = (req) => (req.query.accountId ? intId(req.query.accountId) : null);
+  app.get('/api/summary', wrap((req, res) => res.json(store.summary(db, String(req.query.month), accQ(req)))));
+  app.get('/api/insights', wrap((req, res) => { need(store.MONTH_RE.test(String(req.query.month)), 'חודש לא תקין'); res.json(store.insights(db, req.query.month, accQ(req))); }));
+  app.put('/api/income', wrap((req, res) => {
+    const b = req.body;
+    need(store.MONTH_RE.test(String(b.month)), 'חודש לא תקין');
+    store.setIncome(db, b.month, b.amount === null || b.amount === '' ? null : Number(b.amount), !!b.all);
+    res.json({ ok: true });
+  }));
   app.get('/api/months', wrap((req, res) => res.json(db.prepare('SELECT DISTINCT substr(date,1,7) m FROM transactions ORDER BY m DESC').all().map((r) => r.m))));
   const SETTING_KEYS = ['ntfy_topic', 'ntfy_server', 'auto_sync', 'sync_hour', 'initial_months'];
   app.get('/api/settings', wrap((req, res) => res.json({

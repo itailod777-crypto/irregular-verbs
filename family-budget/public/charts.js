@@ -1,6 +1,15 @@
 'use strict';
-// גרפים ב-SVG נקי (בלי ספריות). צבעים מגיעים ממשתני CSS, כך שמצב כהה עובד אוטומטית.
-// כחול = הוצאות חוזרות, כתום = חד-פעמיות, טורקיז = הכנסות (פלטה שנבדקה ל-CVD ולניגודיות).
+// גרפים ב-SVG נקי (בלי ספריות). כל גרף נצייר לפי הרוחב האמיתי של המסך, כך שהטקסט תמיד קריא.
+// צבעים: כחול = קבועות, כתום = חד-פעמיות, טורקיז = הכנסות (פלטה שנבדקה ל-CVD ולניגודיות).
+
+// עוטף גרף: מצייר מחדש כשהרוחב משתנה (חלון, סיבוב טלפון)
+function mountChart(draw) {
+  const box = h('div', { class: 'chart-box' });
+  let last = 0;
+  const run = () => { const w = Math.floor(box.clientWidth); if (w > 0 && w !== last) { last = w; box.replaceChildren(draw(Math.max(w, 260), box)); } };
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(run).observe(box); else requestAnimationFrame(run);
+  return box;
+}
 
 function tooltip(box) {
   const tip = h('div', { class: 'tip', role: 'presentation' });
@@ -9,135 +18,178 @@ function tooltip(box) {
     show(x, y, title, rows) {
       tip.replaceChildren(h('b', {}, title), ...rows.map(([c, k, v]) => h('div', {}, h('span', {}, c ? h('span', { class: 'dot', style: { background: c, marginInlineEnd: '6px' } }) : null, k), h('span', { class: 'num' }, v))));
       const w = box.clientWidth;
-      tip.style.top = Math.max(0, y - 10) + 'px';
-      tip.style.left = Math.min(Math.max(0, x - 80), Math.max(0, w - 170)) + 'px';
+      tip.style.top = Math.max(0, y - 6) + 'px';
+      tip.style.left = Math.min(Math.max(0, x - 85), Math.max(0, w - 180)) + 'px';
       tip.classList.add('on');
     },
     hide() { tip.classList.remove('on'); },
   };
 }
-
 function niceMax(v) {
   if (v <= 0) return 1000;
-  const p = 10 ** Math.floor(Math.log10(v));
-  const n = v / p;
+  const p = 10 ** Math.floor(Math.log10(v)), n = v / p;
   return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p;
 }
 const short = (n) => (n >= 1000 ? `${Math.round(n / 100) / 10}K`.replace('.0K', 'K') : String(Math.round(n)));
-
-// עמודות מוערמות (חוזרות + חד-פעמיות) לכל חודש, וקו הכנסות. ציר זמן מימין לשמאל כמו כיוון הקריאה.
-function trendChart(trend) {
-  const box = h('div', { class: 'chart-box' });
-  const W = 640, H = 250, L = 8, R = 44, T = 14, B = 28;
-  const iw = W - L - R, ih = H - T - B;
-  const max = niceMax(Math.max(...trend.map((t) => Math.max(t.income, t.expense))));
-  const y = (v) => T + ih - (v / max) * ih;
-  const n = trend.length, slot = iw / n, bw = Math.min(46, slot * 0.52);
-  const cx = (i) => L + iw - slot * (i + 0.5); // i=0 הישן ביותר => הכי ימני
-  const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'מגמת 6 חודשים: הוצאות חוזרות, חד-פעמיות והכנסות' });
-  for (let k = 0; k <= 4; k++) {
-    const v = (max / 4) * k;
-    svg.append(s('line', { x1: L, x2: W - R + 6, y1: y(v), y2: y(v), stroke: k === 0 ? 'var(--axis)' : 'var(--grid)', 'stroke-width': 1 }));
-    svg.append(s('text', { x: W - R + 12, y: y(v) + 4, 'text-anchor': 'start' }, short(v)));
-  }
-  const tip = tooltip(box);
-  const pts = [];
-  trend.forEach((t, i) => {
-    const x = cx(i) - bw / 2;
-    const hr = (t.recurring / max) * ih, ho = (t.oneTime / max) * ih;
-    const g = s('g');
-    const gap = hr > 3 && ho > 3 ? 2 : 0;
-    if (hr > 0.5) g.append(s('path', { d: roundTop(x, y(0) - hr, bw, hr, ho > 0.5 ? 0 : 5), fill: 'var(--s1)' }));
-    if (ho > 0.5) g.append(s('path', { d: roundTop(x, y(0) - hr - ho - gap, bw, ho, 5), fill: 'var(--s2)', stroke: 'var(--surface)', 'stroke-width': 0 }));
-    svg.append(g);
-    svg.append(s('text', { x: cx(i), y: H - 8, 'text-anchor': 'middle', class: i === n - 1 ? 't-ink' : '' }, monthShortLabel(t.month)));
-    pts.push([cx(i), y(t.income)]);
-  });
-  const line = pts.map(([px, py], i) => `${i ? 'L' : 'M'}${px},${py}`).join(' ');
-  svg.append(s('path', { d: line, fill: 'none', stroke: 'var(--s3)', 'stroke-width': 2.5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
-  pts.forEach(([px, py]) => svg.append(s('circle', { cx: px, cy: py, r: 5, fill: 'var(--s3)', stroke: 'var(--surface)', 'stroke-width': 2 })));
-  trend.forEach((t, i) => {
-    const hit = s('rect', { x: cx(i) - slot / 2, y: T, width: slot, height: ih + B, fill: 'transparent', tabindex: 0, role: 'img',
-      'aria-label': `${monthLabel(t.month)}: הכנסות ${fmt(t.income)}, חוזרות ${fmt(t.recurring)}, חד-פעמיות ${fmt(t.oneTime)}` });
-    const open = () => tip.show(cx(i) * (box.clientWidth / W), T, monthLabel(t.month), [
-      ['var(--s3)', 'הכנסות', fmt(t.income)], ['var(--s1)', 'הוצאות חוזרות', fmt(t.recurring)], ['var(--s2)', 'חד-פעמיות', fmt(t.oneTime)], [null, 'יתרה', fmt(t.income - t.expense)]]);
-    hit.addEventListener('pointerenter', open); hit.addEventListener('focus', open);
-    hit.addEventListener('pointerleave', () => tip.hide()); hit.addEventListener('blur', () => tip.hide());
-    svg.append(hit);
-  });
-  box.prepend(svg);
-  box.append(legend([['var(--s1)', 'הוצאות חוזרות'], ['var(--s2)', 'הוצאות חד-פעמיות'], ['var(--s3)', 'הכנסות']]));
-  return box;
-}
-
+function legend(items) { return h('div', { class: 'legend' }, items.map(([c, t, dashed]) => h('span', {}, h('span', { class: dashed ? 'dot dash' : 'dot', style: { background: dashed ? 'transparent' : c, borderColor: c } }), t))); }
 function roundTop(x, y, w, hgt, r) {
   r = Math.min(r, hgt, w / 2);
   if (r <= 0) return `M${x},${y} h${w} v${hgt} h${-w} z`;
   return `M${x},${y + hgt} V${y + r} Q${x},${y} ${x + r},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + hgt} z`;
 }
-
-function legend(items) {
-  return h('div', { class: 'legend' }, items.map(([c, t]) => h('span', {}, h('span', { class: 'dot', style: { background: c } }), t)));
+function axisY(svg, W, L, R, T, ih, max, ticks = 4) {
+  for (let k = 0; k <= ticks; k++) {
+    const v = (max / ticks) * k, y = T + ih - (v / max) * ih;
+    svg.append(s('line', { x1: L, x2: W - R + 4, y1: y, y2: y, stroke: k === 0 ? 'var(--axis)' : 'var(--grid)', 'stroke-width': 1 }));
+    svg.append(s('text', { x: W - R + 10, y: y + 4, 'text-anchor': 'start' }, short(v)));
+  }
 }
 
-// טבלה חלופית לגרף (נגישות)
+// 6 חודשים: עמודות מוערמות (קבועות + חד-פעמיות) וקו הכנסות. החודש הישן ביותר מימין, כמו כיוון הקריאה.
+function trendChart(trend) {
+  const wrap = h('div', {}, mountChart((W, box) => {
+    const H = 270, L = 6, R = 44, T = 18, B = 32, iw = W - L - R, ih = H - T - B;
+    const max = niceMax(Math.max(...trend.map((t) => Math.max(t.income, t.expense))));
+    const y = (v) => T + ih - (v / max) * ih;
+    const n = trend.length, slot = iw / n, bw = Math.min(46, slot * 0.56), cx = (i) => L + iw - slot * (i + 0.5);
+    const svg = s('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'הכנסות מול הוצאות קבועות וחד-פעמיות ב-6 חודשים' });
+    axisY(svg, W, L, R, T, ih, max);
+    const tip = tooltip(box), pts = [];
+    trend.forEach((t, i) => {
+      const x = cx(i) - bw / 2, hr = (t.recurring / max) * ih, ho = (t.oneTime / max) * ih, gap = hr > 3 && ho > 3 ? 2 : 0;
+      if (hr > 0.5) svg.append(s('path', { d: roundTop(x, y(0) - hr, bw, hr, ho > 0.5 ? 0 : 5), fill: 'var(--s1)' }));
+      if (ho > 0.5) svg.append(s('path', { d: roundTop(x, y(0) - hr - ho - gap, bw, ho, 5), fill: 'var(--s2)' }));
+      svg.append(s('text', { x: cx(i), y: H - 9, 'text-anchor': 'middle', class: i === n - 1 ? 't-ink' : '' }, monthShortLabel(t.month)));
+      pts.push([cx(i), y(t.income)]);
+    });
+    svg.append(s('path', { d: pts.map(([px, py], i) => `${i ? 'L' : 'M'}${px},${py}`).join(' '), fill: 'none', stroke: 'var(--s3)', 'stroke-width': 2.5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    pts.forEach(([px, py]) => svg.append(s('circle', { cx: px, cy: py, r: 5, fill: 'var(--s3)', stroke: 'var(--surface)', 'stroke-width': 2 })));
+    trend.forEach((t, i) => {
+      const hit = s('rect', { x: cx(i) - slot / 2, y: T, width: slot, height: ih + B, fill: 'transparent', tabindex: 0, role: 'img', 'aria-label': `${monthLabel(t.month)}: נכנס ${fmt(t.income)}, קבועות ${fmt(t.recurring)}, חד-פעמיות ${fmt(t.oneTime)}` });
+      const open = () => tip.show(cx(i), T, monthLabel(t.month), [['var(--s3)', 'נכנס', fmt(t.income)], ['var(--s1)', 'הוצאות קבועות', fmt(t.recurring)], ['var(--s2)', 'חד-פעמיות', fmt(t.oneTime)], [null, 'נשאר', fmt(t.income - t.expense)]]);
+      hit.addEventListener('pointerenter', open); hit.addEventListener('focus', open);
+      hit.addEventListener('pointerleave', () => tip.hide()); hit.addEventListener('blur', () => tip.hide());
+      svg.append(hit);
+    });
+    const frag = document.createDocumentFragment(); frag.append(svg); return frag;
+  }));
+  return h('div', {}, wrap, legend([['var(--s3)', 'נכנס'], ['var(--s1)', 'הוצאות קבועות'], ['var(--s2)', 'הוצאות חד-פעמיות']]));
+}
+
 function trendTable(trend) {
   return h('div', { class: 'table-wrap' }, h('table', {},
-    h('thead', {}, h('tr', {}, ['חודש', 'הכנסות', 'חוזרות', 'חד-פעמיות', 'יתרה'].map((t, i) => h('th', { class: i ? 'amt' : '' }, t)))),
+    h('thead', {}, h('tr', {}, ['חודש', 'נכנס', 'קבועות', 'חד-פעמיות', 'נשאר'].map((t, i) => h('th', { class: i ? 'amt' : '' }, t)))),
     h('tbody', {}, trend.map((t) => h('tr', {}, h('td', {}, monthLabel(t.month)), h('td', { class: 'amt' }, fmt(t.income)), h('td', { class: 'amt' }, fmt(t.recurring)), h('td', { class: 'amt' }, fmt(t.oneTime)), h('td', { class: 'amt ' + (t.income - t.expense >= 0 ? 'pos' : 'neg') }, fmt(t.income - t.expense)))))));
 }
 
-// טבעת: חוזר מול חד-פעמי
+// קצב ההוצאה: הסכום המצטבר החודש מול החודש הקודם, יום אחרי יום
+function paceChart(ins) {
+  const box = mountChart((W, bx) => {
+    const H = 250, L = 6, R = 44, T = 18, B = 30, iw = W - L - R, ih = H - T - B, D = Math.max(ins.daysInMonth, ins.previous.length);
+    const max = niceMax(Math.max(...ins.current, ...ins.previous, 1));
+    const x = (d) => L + iw - (iw * (d - 1)) / (D - 1), y = (v) => T + ih - (v / max) * ih;
+    const svg = s('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'הוצאה מצטברת החודש מול החודש הקודם' });
+    axisY(svg, W, L, R, T, ih, max);
+    for (const d of [1, 5, 10, 15, 20, 25, 30]) if (d <= D) svg.append(s('text', { x: x(d), y: H - 9, 'text-anchor': 'middle' }, String(d)));
+    const path = (arr) => arr.map((v, i) => `${i ? 'L' : 'M'}${x(i + 1)},${y(v)}`).join(' ');
+    svg.append(s('path', { d: path(ins.previous), fill: 'none', stroke: 'var(--muted)', 'stroke-width': 2, 'stroke-dasharray': '5 5', 'stroke-linecap': 'round' }));
+    if (ins.current.length) {
+      const area = `${path(ins.current)} L${x(ins.current.length)},${y(0)} L${x(1)},${y(0)} Z`;
+      svg.append(s('path', { d: area, fill: 'var(--s1)', opacity: 0.12 }));
+      svg.append(s('path', { d: path(ins.current), fill: 'none', stroke: 'var(--s1)', 'stroke-width': 3, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+      const last = ins.current.length;
+      svg.append(s('circle', { cx: x(last), cy: y(ins.current[last - 1]), r: 6, fill: 'var(--s1)', stroke: 'var(--surface)', 'stroke-width': 2.5 }));
+    }
+    const tip = tooltip(bx);
+    const hit = s('rect', { x: L, y: T, width: iw, height: ih + B, fill: 'transparent' });
+    hit.addEventListener('pointermove', (e) => {
+      const r = hit.getBoundingClientRect(), d = Math.min(D, Math.max(1, Math.round(1 + ((r.right - e.clientX) / r.width) * (D - 1))));
+      tip.show(x(d), y(ins.current[d - 1] ?? ins.previous[d - 1] ?? 0), `יום ${d} בחודש`, [
+        ['var(--s1)', 'החודש', ins.current[d - 1] !== undefined ? fmt(ins.current[d - 1]) : '—'], ['var(--muted)', 'חודש קודם', ins.previous[d - 1] !== undefined ? fmt(ins.previous[d - 1]) : '—']]);
+    });
+    hit.addEventListener('pointerleave', () => tip.hide());
+    svg.append(hit);
+    const frag = document.createDocumentFragment(); frag.append(svg); return frag;
+  });
+  return h('div', {}, box, legend([['var(--s1)', 'החודש הזה'], ['var(--muted)', 'החודש הקודם', true]]));
+}
+
+// עמודות פשוטות לפי חודש (לסכום קבוע/חד-פעמי)
+function barTrend(items, color) {
+  return mountChart((W, box) => {
+    const H = 210, L = 6, R = 6, T = 22, B = 28, iw = W - L - R, ih = H - T - B, max = niceMax(Math.max(...items.map((t) => t.total)));
+    const slot = iw / items.length, bw = Math.min(40, slot * 0.6), tip = tooltip(box);
+    const svg = s('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'סכום לפי חודש' });
+    svg.append(s('line', { x1: L, x2: W - R, y1: T + ih, y2: T + ih, stroke: 'var(--axis)' }));
+    items.forEach((t, i) => {
+      const cx = L + iw - slot * (i + 0.5), hh = (t.total / max) * ih;
+      if (hh > 0.5) svg.append(s('path', { d: roundTop(cx - bw / 2, T + ih - hh, bw, hh, 5), fill: color, opacity: i === items.length - 1 ? 1 : 0.75 }));
+      svg.append(s('text', { x: cx, y: H - 8, 'text-anchor': 'middle', class: i === items.length - 1 ? 't-ink' : '' }, monthShortLabel(t.month)));
+      if (t.total > 0) svg.append(s('text', { x: cx, y: T + ih - hh - 6, 'text-anchor': 'middle', class: 't-ink' }, short(t.total)));
+      const hit = s('rect', { x: cx - slot / 2, y: T, width: slot, height: ih + B, fill: 'transparent' });
+      hit.addEventListener('pointerenter', () => tip.show(cx, T, monthLabel(t.month), [[color, 'סה״כ', fmt(t.total)]]));
+      hit.addEventListener('pointerleave', () => tip.hide());
+      svg.append(hit);
+    });
+    const frag = document.createDocumentFragment(); frag.append(svg); return frag;
+  });
+}
+
 function splitDonut(recurring, oneTime) {
-  const total = recurring + oneTime;
-  const box = h('div', { class: 'chart-box', style: { width: '190px', flex: 'none' } });
+  const total = recurring + oneTime, box = h('div', { class: 'chart-box', style: { width: '190px', flex: 'none' } });
   const S = 190, c = S / 2, r = 72, sw = 26, C = 2 * Math.PI * r;
-  const svg = s('svg', { viewBox: `0 0 ${S} ${S}`, role: 'img', 'aria-label': `חוזרות ${fmt(recurring)} מול חד-פעמיות ${fmt(oneTime)}` });
+  const svg = s('svg', { viewBox: `0 0 ${S} ${S}`, width: S, height: S, role: 'img', 'aria-label': `קבועות ${fmt(recurring)} מול חד-פעמיות ${fmt(oneTime)}` });
   svg.append(s('circle', { cx: c, cy: c, r, fill: 'none', stroke: 'var(--surface-2)', 'stroke-width': sw }));
   if (total > 0) {
     const a = (recurring / total) * C, gap = recurring > 0 && oneTime > 0 ? 3 : 0;
-    const seg = (len, off, color) => s('circle', { cx: c, cy: c, r, fill: 'none', stroke: color, 'stroke-width': sw, 'stroke-dasharray': `${Math.max(0, len - gap)} ${C}`, 'stroke-dashoffset': -off, transform: `rotate(-90 ${c} ${c})`, 'stroke-linecap': 'butt' });
+    const seg = (len, off, color) => s('circle', { cx: c, cy: c, r, fill: 'none', stroke: color, 'stroke-width': sw, 'stroke-dasharray': `${Math.max(0, len - gap)} ${C}`, 'stroke-dashoffset': -off, transform: `rotate(-90 ${c} ${c})` });
     if (recurring > 0) svg.append(seg(a, 0, 'var(--s1)'));
     if (oneTime > 0) svg.append(seg(C - a, a, 'var(--s2)'));
   }
-  svg.append(s('text', { x: c, y: c - 2, 'text-anchor': 'middle', class: 't-ink', style: 'font-size:12px' }, 'סה״כ הוצאות'));
+  svg.append(s('text', { x: c, y: c - 2, 'text-anchor': 'middle', class: 't-ink' }, 'סה״כ יצא'));
   svg.append(s('text', { x: c, y: c + 22, 'text-anchor': 'middle', style: 'font-size:22px;font-weight:800;fill:var(--ink)' }, fmt(total)));
   box.append(svg);
   return box;
 }
-
 function splitBar(recurring, oneTime) {
   const total = recurring + oneTime || 1;
-  return h('div', {}, h('div', { class: 'splitbar', role: 'img', 'aria-label': `חוזרות ${pct(recurring / total)}, חד-פעמיות ${pct(oneTime / total)}` },
-    h('i', { style: { flex: `${recurring} 1 0`, background: 'var(--s1)' } }), h('i', { style: { flex: `${oneTime} 1 0`, background: 'var(--s2)' } })));
+  return h('div', { class: 'splitbar', role: 'img', 'aria-label': `קבועות ${pct(recurring / total)}, חד-פעמיות ${pct(oneTime / total)}` },
+    h('i', { style: { flex: `${recurring} 1 0`, background: 'var(--s1)' } }), h('i', { style: { flex: `${oneTime} 1 0`, background: 'var(--s2)' } }));
 }
-
 function sparkline(values, color = 'var(--s1)') {
-  const W = 84, H = 26, max = Math.max(...values, 1);
-  const n = values.length;
+  const W = 84, H = 26, max = Math.max(...values, 1), n = values.length;
   const pts = values.map((v, i) => [W - 3 - (i * (W - 6)) / (n - 1), H - 3 - (v / max) * (H - 8)]);
   const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: 'img', 'aria-label': 'מגמה 6 חודשים' });
   svg.append(s('path', { d: pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x},${y}`).join(' '), fill: 'none', stroke: color, 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
-  const [lx, ly] = pts[0];
-  svg.append(s('circle', { cx: lx, cy: ly, r: 3.5, fill: color, stroke: 'var(--surface)', 'stroke-width': 2 }));
+  svg.append(s('circle', { cx: pts[0][0], cy: pts[0][1], r: 3.5, fill: color, stroke: 'var(--surface)', 'stroke-width': 2 }));
   return svg;
 }
 
-// עמודות אופקיות: שם, סכום, פס; אם יש תקציב - צבע לפי ניצול
+// עמודות אופקיות לפי קטגוריה; אם יש תקציב, הצבע לפי הניצול
 function categoryBars(items, { onlyTop = 8, total } = {}) {
   const list = items.filter((i) => i.total > 0 || i.budget).slice(0, onlyTop);
   const max = Math.max(...list.map((i) => Math.max(i.total, i.budget || 0)), 1);
   const sum = total ?? items.reduce((a, b) => a + b.total, 0);
-  if (!list.length) return h('div', { class: 'empty' }, 'אין עדיין הוצאות בחודש הזה');
+  if (!list.length) return h('div', { class: 'empty' }, 'עדיין אין הוצאות בחודש הזה');
   return h('div', { class: 'bars' }, list.map((i) => {
-    const hasB = !!i.budget;
-    const state = hasB ? (i.pct > 1 ? 'crit' : i.pct >= 0.85 ? 'warn' : 'good') : '';
-    const label = hasB ? (i.pct > 1 ? `חריגה של ${fmt(i.total - i.budget)}` : `נותרו ${fmt(i.budget - i.total)}`) : `${pct(i.total / (sum || 1))} מההוצאות`;
+    const hasB = !!i.budget, state = hasB ? (i.pct > 1 ? 'crit' : i.pct >= 0.85 ? 'warn' : 'good') : '';
+    const label = hasB ? (i.pct > 1 ? `חרגתם ב-${fmt(i.total - i.budget)}` : `נשארו ${fmt(i.budget - i.total)}`) : `${pct(i.total / (sum || 1))} מכלל ההוצאות`;
     return h('div', { class: 'bar-row' },
       h('div', { class: 'name' }, h('span', { class: 'dot', style: { background: i.color } }), h('span', {}, i.name)),
-      h('div', { class: 'val num' }, fmt(i.total), hasB ? h('span', { style: { color: 'var(--ink-2)', fontWeight: 500 } }, ` / ${fmt(i.budget)}`) : null),
+      h('div', { class: 'val num' }, fmt(i.total), hasB ? h('span', { class: 'of' }, ` מתוך ${fmt(i.budget)}`) : null),
       h('div', { class: 'track', role: 'progressbar', 'aria-valuenow': Math.round(i.total), 'aria-valuemin': 0, 'aria-valuemax': Math.round(hasB ? i.budget : max), 'aria-label': i.name },
         h('div', { class: 'fill ' + state, style: { width: `${Math.min(100, (i.total / (hasB ? Math.max(i.budget, i.total) : max)) * 100)}%` } })),
       h('div', { class: 'bar-meta' }, h('span', {}, state === 'crit' ? '⚠ ' + label : label), hasB ? h('span', {}, pct(i.pct)) : h('span', {}, `${i.count} עסקאות`)));
   }));
+}
+
+// רשימת דירוג פשוטה (בתי עסק / כרטיסים)
+function rankBars(items, unitLabel = 'עסקאות') {
+  const max = Math.max(...items.map((i) => i.total), 1);
+  if (!items.length) return h('div', { class: 'empty' }, 'עדיין אין נתונים');
+  return h('div', { class: 'bars' }, items.map((i, idx) => h('div', { class: 'bar-row' },
+    h('div', { class: 'name' }, h('span', { class: 'rank' }, idx + 1), h('span', {}, i.name || i.label)),
+    h('div', { class: 'val num' }, fmt(i.total)),
+    h('div', { class: 'track' }, h('div', { class: 'fill', style: { width: `${(i.total / max) * 100}%` } })),
+    i.count ? h('div', { class: 'bar-meta' }, h('span', {}, `${i.count} ${unitLabel}`)) : null)));
 }

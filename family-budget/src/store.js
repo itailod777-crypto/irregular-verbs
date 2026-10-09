@@ -1,6 +1,6 @@
 'use strict';
 const crypto = require('crypto');
-const { tx } = require('./db');
+const { tx, getSetting, setSetting } = require('./db');
 const { normalize, merchantKey } = require('./text');
 const { compileRules, categorize } = require('./categorize');
 const { assignHashes } = require('./dedupe');
@@ -133,11 +133,28 @@ function addMonths(month, delta) {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
-function summary(db, month) {
+function effectiveIncome(db, month, computed) {
+  const ov = getSetting(db, `income:${month}`, null);
+  if (ov !== null) return { income: Number(ov), source: 'manual' };
+  const def = getSetting(db, 'income_default', null);
+  if (computed <= 0 && def !== null) return { income: Number(def), source: 'default' };
+  return { income: computed, source: computed > 0 ? 'transactions' : 'none' };
+}
+
+// הכנסה שהוזנה ידנית: לחודש מסוים, או כברירת מחדל לכל החודשים. amount=null מבטל.
+function setIncome(db, month, amount, all) {
+  monthRange(month);
+  if (amount === null) { db.prepare('DELETE FROM settings WHERE key=?').run(`income:${month}`); return; }
+  const n = Number(amount);
+  if (!Number.isFinite(n) || n < 0) throw new Error('סכום הכנסה לא תקין');
+  if (all) { setSetting(db, 'income_default', n); db.prepare('DELETE FROM settings WHERE key=?').run(`income:${month}`); } else setSetting(db, `income:${month}`, n);
+}
+
+function summary(db, month, accountId = null) {
   monthRange(month);
   const rows = db.prepare(`SELECT c.id, c.name, c.kind, c.color, SUM(t.amount) total, COUNT(*) n
     FROM transactions t JOIN categories c ON c.id=t.category_id
-    WHERE t.ignored=0 AND substr(t.date,1,7)=? GROUP BY c.id`).all(month);
+    WHERE t.ignored=0 AND substr(t.date,1,7)=? AND (? IS NULL OR t.account_id=?) GROUP BY c.id`).all(month, accountId, accountId);
   const budgets = new Map(db.prepare('SELECT category_id, amount FROM budgets').all().map((b) => [b.category_id, b.amount]));
   let income = 0, expense = 0, transfers = 0;
   const expenses = [], incomes = [];
@@ -163,17 +180,56 @@ function summary(db, month) {
   const trend = [];
   const from = addMonths(month, -5);
   const tr = db.prepare(`SELECT substr(t.date,1,7) m, c.kind, SUM(t.amount) total FROM transactions t
-    JOIN categories c ON c.id=t.category_id WHERE t.ignored=0 AND c.kind<>'transfer' AND substr(t.date,1,7) BETWEEN ? AND ?
-    GROUP BY m, c.kind`).all(from, month);
+    JOIN categories c ON c.id=t.category_id WHERE t.ignored=0 AND c.kind<>'transfer' AND substr(t.date,1,7) BETWEEN ? AND ? AND (? IS NULL OR t.account_id=?)
+    GROUP BY m, c.kind`).all(from, month, accountId, accountId);
   for (let i = 0; i < 6; i++) {
     const m = addMonths(from, i);
-    const inc = tr.find((x) => x.m === m && x.kind === 'income')?.total || 0;
+    let inc = tr.find((x) => x.m === m && x.kind === 'income')?.total || 0;
+    if (!accountId) inc = effectiveIncome(db, m, inc).income;
     const exp = -(tr.find((x) => x.m === m && x.kind === 'expense')?.total || 0);
     trend.push({ month: m, income: inc, expense: exp });
   }
-  const { split, trend: st } = splitSummary(db, month);
+  const incomeComputed = income;
+  let incomeSource = income > 0 ? 'transactions' : 'none';
+  if (!accountId) { const e = effectiveIncome(db, month, income); income = e.income; incomeSource = e.source; }
+  const { split, trend: st } = splitSummary(db, month, accountId);
   for (const t of trend) { const x = st.get(t.month); t.recurring = x ? x.recurring : 0; t.oneTime = x ? x.oneTime : 0; }
-  return { month, income, expense, balance: income - expense, transfers, expenses, incomes, trend, split };
+  return { month, income, incomeComputed, incomeSource, expense, balance: income - expense, transfers, expenses, incomes, trend, split };
+}
+
+// תובנות לגרפים: קצב הוצאה מצטבר מול החודש הקודם, בתי העסק הגדולים, וחלוקה לפי כרטיס
+function insights(db, month, accountId = null) {
+  monthRange(month);
+  const prev = addMonths(month, -1);
+  const rows = db.prepare(`SELECT t.date, t.amount, t.description, t.account_id FROM transactions t JOIN categories c ON c.id=t.category_id
+    WHERE t.ignored=0 AND c.kind='expense' AND substr(t.date,1,7) IN (?,?)`).all(month, prev);
+  const daysIn = (m) => new Date(Date.UTC(Number(m.slice(0, 4)), Number(m.slice(5, 7)), 0)).getUTCDate();
+  const now = new Date();
+  const todayM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const cum = (m, upTo) => {
+    const daily = new Array(daysIn(m)).fill(0);
+    for (const r of rows) if (r.date.startsWith(m) && (!accountId || r.account_id === accountId)) daily[Number(r.date.slice(8, 10)) - 1] += -r.amount;
+    const out = []; let sum = 0;
+    for (let d = 0; d < Math.min(daily.length, upTo); d++) { sum += daily[d]; out.push(Math.round(sum * 100) / 100); }
+    return out;
+  };
+  const isNow = month === todayM;
+  const merchants = new Map();
+  for (const r of rows) {
+    if (!r.date.startsWith(month) || r.amount >= 0 || (accountId && r.account_id !== accountId)) continue;
+    const k = merchantKey(r.description) || r.description;
+    const m = merchants.get(k) || { total: 0, count: 0, names: new Map() };
+    m.total += -r.amount; m.count++; m.names.set(r.description, (m.names.get(r.description) || 0) + 1);
+    merchants.set(k, m);
+  }
+  const topMerchants = [...merchants.values()].map((m) => ({ name: [...m.names.entries()].sort((a, b) => b[1] - a[1])[0][0], total: m.total, count: m.count }))
+    .sort((a, b) => b.total - a.total).slice(0, 8);
+  const byAccount = db.prepare(`SELECT a.id, COALESCE(a.label, 'ללא כרטיס (ידני או מקובץ)') label, SUM(-t.amount) total FROM transactions t JOIN categories c ON c.id=t.category_id
+    LEFT JOIN accounts a ON a.id=t.account_id WHERE t.ignored=0 AND c.kind='expense' AND substr(t.date,1,7)=? GROUP BY a.id ORDER BY total DESC`).all(month).filter((r) => r.total > 0);
+  return {
+    month, prevMonth: prev, daysInMonth: daysIn(month), todayDay: isNow ? now.getDate() : null,
+    current: cum(month, isNow ? now.getDate() : 99), previous: cum(prev, 99), topMerchants, byAccount,
+  };
 }
 
 function listTransactions(db, { month, q, categoryId, accountId, type, limit = 200, offset = 0 }) {
@@ -195,5 +251,5 @@ function listTransactions(db, { month, q, categoryId, accountId, type, limit = 2
 
 module.exports = {
   addTransactions, previewDuplicates, addManual, setCategory, createRule, applyRule, recategorizeAll,
-  summary, listTransactions, addMonths, loadRules, MONTH_RE,
+  summary, listTransactions, insights, setIncome, addMonths, loadRules, MONTH_RE,
 };

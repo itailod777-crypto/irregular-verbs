@@ -245,3 +245,40 @@ test('הוצאות חוזרות מול חד-פעמיות: זיהוי אוטומ�
   assert.equal((await call('POST', '/api/categories', { name: 'חתונות ואירועים' })).status, 400);
   assert.equal((await call('DELETE', `/api/categories/${c.json.id}`)).status, 200);
 });
+
+test('שני כרטיסים מאוחדים, סינון לפי כרטיס, הכנסה ידנית ותובנות', async (t) => {
+  const ctx = await startApp(); t.after(ctx.close);
+  const { db, call } = ctx;
+  const a = Number(db.prepare("INSERT INTO accounts (label, company) VALUES ('ויזה דנה','visaCal')").run().lastInsertRowid);
+  const b = Number(db.prepare("INSERT INTO accounts (label, company) VALUES ('ישראכרט יוסי','isracard')").run().lastInsertRowid);
+  const demo = generateDemo('2026-09', 6);
+  store.addTransactions(db, demo.card.filter((_, i) => i % 2 === 0), { source: 'demo', accountId: a });
+  store.addTransactions(db, demo.card.filter((_, i) => i % 2 === 1), { source: 'demo', accountId: b });
+  const all = (await call('GET', '/api/summary?month=2026-09')).json;
+  const sa = (await call('GET', `/api/summary?month=2026-09&accountId=${a}`)).json;
+  const sb = (await call('GET', `/api/summary?month=2026-09&accountId=${b}`)).json;
+  assert.ok(Math.abs(all.expense - (sa.expense + sb.expense)) < 0.01, 'איחוד = סכום הכרטיסים');
+  assert.ok(sa.expense > 0 && sb.expense > 0);
+  // הכנסה: אין עסקאות הכנסה -> ברירת מחדל / ידנית
+  assert.equal(all.incomeSource, 'none');
+  await call('PUT', '/api/income', { month: '2026-09', amount: 20000, all: true });
+  let s = (await call('GET', '/api/summary?month=2026-09')).json;
+  assert.equal(s.income, 20000); assert.equal(s.incomeSource, 'default');
+  assert.ok(Math.abs(s.balance - (20000 - s.expense)) < 0.01);
+  assert.equal(s.trend[3].income, 20000, 'ברירת המחדל חלה על כל חודשי המגמה');
+  await call('PUT', '/api/income', { month: '2026-09', amount: 25000 });
+  s = (await call('GET', '/api/summary?month=2026-09')).json;
+  assert.equal(s.income, 25000); assert.equal(s.incomeSource, 'manual');
+  await call('PUT', '/api/income', { month: '2026-09', amount: null });
+  assert.equal((await call('GET', '/api/summary?month=2026-09')).json.income, 20000);
+  assert.equal((await call('PUT', '/api/income', { month: 'x', amount: 5 })).status, 400);
+  assert.equal((await call('PUT', '/api/income', { month: '2026-09', amount: -5 })).status, 400);
+  // תובנות
+  const ins = (await call('GET', '/api/insights?month=2026-09')).json;
+  assert.equal(ins.previous.length, 31); assert.equal(ins.current.length, 30);
+  assert.ok(ins.current.every((v, i) => i === 0 || v >= ins.current[i - 1]), 'מצטבר עולה');
+  assert.ok(ins.topMerchants.length > 0 && ins.topMerchants[0].total >= ins.topMerchants[1].total);
+  assert.equal(ins.byAccount.length, 2);
+  const rec = (await call('GET', `/api/recurring?month=2026-09&accountId=${a}`)).json;
+  assert.ok(rec.items.every((i) => i.day >= 1 && i.day <= 31));
+});

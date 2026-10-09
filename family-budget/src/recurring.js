@@ -12,11 +12,11 @@ function addMonths(month, delta) {
 const keyOf = (desc) => merchantKey(desc) || String(desc).trim().toLowerCase();
 
 // מחזיר את כל הוצאות 6 החודשים שנגמרים ב-month, עם סימון recurring לכל אחת
-function classifyWindow(db, month) {
+function classifyWindow(db, month, accountId = null) {
   const from = addMonths(month, -5);
   const rows = db.prepare(`SELECT t.id, t.date, t.amount, t.description, t.category_id, c.name category, c.color, c.recurring_default rd,
       substr(t.date,1,7) m FROM transactions t JOIN categories c ON c.id=t.category_id
-    WHERE t.ignored=0 AND c.kind='expense' AND substr(t.date,1,7) BETWEEN ? AND ?`).all(from, month);
+    WHERE t.ignored=0 AND c.kind='expense' AND substr(t.date,1,7) BETWEEN ? AND ? AND (? IS NULL OR t.account_id=?)`).all(from, month, accountId, accountId);
   const overrides = new Map(db.prepare('SELECT key, recurring FROM recurring_overrides').all().map((o) => [o.key, !!o.recurring]));
   const stats = new Map();
   for (const r of rows) {
@@ -48,8 +48,8 @@ function setOverride(db, key, recurring) {
   else db.prepare('INSERT INTO recurring_overrides (key, recurring) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET recurring=excluded.recurring').run(k, recurring ? 1 : 0);
 }
 
-function splitSummary(db, month) {
-  const { rows } = classifyWindow(db, month);
+function splitSummary(db, month, accountId = null) {
+  const { rows } = classifyWindow(db, month, accountId);
   const split = { recurring: 0, oneTime: 0 };
   const trend = new Map();
   for (const r of rows) {
@@ -62,16 +62,16 @@ function splitSummary(db, month) {
   return { split, trend };
 }
 
-function recurringPage(db, month) {
-  const { rows } = classifyWindow(db, month);
+function recurringPage(db, month, accountId = null) {
+  const { rows } = classifyWindow(db, month, accountId);
   const months = [];
   for (let i = 0; i < 6; i++) months.push(addMonths(month, i - 5));
   const groups = new Map();
   for (const r of rows) {
     if (!r.recurring) continue;
-    const g = groups.get(r.key) || { key: r.key, names: new Map(), categoryId: r.category_id, category: r.category, color: r.color, byMonth: Object.fromEntries(months.map((m) => [m, 0])), override: r.override, auto: r.auto, count: 0 };
+    const g = groups.get(r.key) || { key: r.key, names: new Map(), categoryId: r.category_id, category: r.category, color: r.color, byMonth: Object.fromEntries(months.map((m) => [m, 0])), override: r.override, auto: r.auto, count: 0, days: [] };
     g.names.set(r.description, (g.names.get(r.description) || 0) + 1);
-    g.byMonth[r.m] += -r.amount; g.count++;
+    g.byMonth[r.m] += -r.amount; g.count++; g.days.push(Number(r.date.slice(8, 10)));
     groups.set(r.key, g);
   }
   const prev = addMonths(month, -1);
@@ -81,6 +81,7 @@ function recurringPage(db, month) {
     const active = vals.filter((v) => v !== 0);
     const avg = active.length ? active.reduce((a, b) => a + b, 0) / active.length : 0;
     return {
+      day: g.days.sort((a, b) => a - b)[Math.floor(g.days.length / 2)], // יום החיוב הרגיל בחודש
       key: g.key, name, categoryId: g.categoryId, category: g.category, color: g.color, auto: g.auto, override: g.override,
       monthly: vals, thisMonth: g.byMonth[month], average: avg,
       pending: g.byMonth[month] === 0 && g.byMonth[prev] !== 0, // היה בחודש שעבר וטרם חויב החודש
@@ -91,8 +92,8 @@ function recurringPage(db, month) {
   return { month, months, items, totals, thisMonth: totals[5], expectedRest, yearly: items.reduce((s, i) => s + i.average, 0) * 12 };
 }
 
-function oneTimePage(db, month) {
-  const { rows } = classifyWindow(db, month);
+function oneTimePage(db, month, accountId = null) {
+  const { rows } = classifyWindow(db, month, accountId);
   const mine = rows.filter((r) => r.m === month && !r.recurring);
   const byCat = new Map();
   let total = 0;
