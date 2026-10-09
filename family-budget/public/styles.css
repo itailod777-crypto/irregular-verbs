@@ -176,3 +176,6 @@ dialog form > * + * { margin-top: 14px; }
   .hero .label, .hero .note { color: #333 !important; }
   .app { padding: 0; }
 }
+
+.app.report { max-width: 900px; padding-top: 16px; }
+.report-bar { margin-bottom: 12px; }

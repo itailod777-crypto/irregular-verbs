@@ -42,7 +42,7 @@ function classifyWindow(db, month) {
 }
 
 function setOverride(db, key, recurring) {
-  const k = String(key || '').trim();
+  const k = keyOf(String(key || '').trim());
   if (!k) throw new Error('חסר מפתח בית עסק');
   if (recurring === null || recurring === undefined) db.prepare('DELETE FROM recurring_overrides WHERE key=?').run(k);
   else db.prepare('INSERT INTO recurring_overrides (key, recurring) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET recurring=excluded.recurring').run(k, recurring ? 1 : 0);

@@ -99,8 +99,9 @@ function render() {
   const route = (location.hash.replace(/^#\//, '') || 'home').split('?')[0];
   state.route = PAGES[route] ? route : 'home';
   document.querySelectorAll('#tabs a').forEach((a) => { if (a.dataset.route === state.route) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
-  const view = document.getElementById('view');
-  view.replaceChildren(h('div', { class: 'empty' }, 'טוען...'));
+  const root = document.getElementById('view');
+  const view = h('div', {}, h('div', { class: 'empty' }, 'טוען...')); // כל ניווט מקבל מכל משלו, כך שדף ישן שמסיים באיחור לא דורס את החדש
+  root.replaceChildren(view);
   PAGES[state.route](view).catch((e) => view.replaceChildren(h('div', { class: 'card empty' }, h('h3', {}, 'משהו השתבש'), e.message)));
 }
 
@@ -255,7 +256,8 @@ async function pageTransactions(view) {
   const list = h('div', {});
   const count = h('p', { class: 'sub' });
   let limit = 200;
-  async function load() {
+  async function load() { try { await loadInner(); } catch (e) { toast(e.message, true); } }
+  async function loadInner() {
     const p = new URLSearchParams({ q: q.value, categoryId: cat.value, type: type.value, limit });
     if (!allm.querySelector('input').checked) p.set('month', state.month);
     const r = await api('GET', `/api/transactions?${p}`);
@@ -306,7 +308,9 @@ function addTxDialog(done) {
     h('label', { class: 'field' }, 'סוג', type), h('label', { class: 'field' }, 'סכום (₪)', amount), h('label', { class: 'field' }, 'תאריך', date), h('label', { class: 'field' }, 'תיאור', desc), h('label', { class: 'field' }, 'קטגוריה', cat)),
     (close) => {
       const ok = h('button', { class: 'btn primary', type: 'button' }, 'שמירה');
-      ok.addEventListener('click', busy(ok, async () => { await api('POST', '/api/transactions', { type: type.value, amount: amount.value, date: date.value, description: desc.value, categoryId: cat.value || null }); toast('נוסף'); close(); done(); }));
+      ok.addEventListener('click', busy(ok, async () => { await api('POST', '/api/transactions', { type: type.value, amount: amount.value, date: date.value, description: desc.value, categoryId: cat.value || null }); toast('נוסף'); close(); await loadMonths();
+        const m = date.value.slice(0, 7); // אם התאריך בחודש אחר, עוברים אליו כדי שהעסקה תיראה
+        if (m !== state.month) setMonth(m); else done(); }));
       return [ok, h('button', { class: 'btn', type: 'button', onclick: close }, 'ביטול')];
     });
 }

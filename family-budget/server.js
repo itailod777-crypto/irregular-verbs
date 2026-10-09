@@ -29,7 +29,7 @@ setInterval(async () => {
     if (getSetting(db, 'auto_sync', '1') !== '1' || !vault.isUnlocked() || app._state.syncing) return;
     if (!db.prepare('SELECT COUNT(*) c FROM accounts').get().c) return;
     const now = new Date();
-    const today = now.toISOString().slice(0, 10);
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     if (now.getHours() < Number(getSetting(db, 'sync_hour', '6')) || getSetting(db, 'last_auto_sync', '') === today) return;
     setSetting(db, 'last_auto_sync', today);
     app._state.syncing = true;

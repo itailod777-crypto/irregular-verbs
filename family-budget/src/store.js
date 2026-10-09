@@ -179,7 +179,7 @@ function summary(db, month) {
 function listTransactions(db, { month, q, categoryId, accountId, type, limit = 200, offset = 0 }) {
   const where = ['1=1'], args = [];
   if (month) { monthRange(month); where.push('substr(t.date,1,7)=?'); args.push(month); }
-  if (q) { where.push('(t.norm LIKE ? OR t.description LIKE ? OR IFNULL(t.memo,\'\') LIKE ?)'); const l = `%${q}%`; args.push(`%${normalize(q)}%`, l, l); }
+  if (q) { where.push("(t.norm LIKE ? ESCAPE '\\' OR t.description LIKE ? ESCAPE '\\' OR IFNULL(t.memo,'') LIKE ? ESCAPE '\\')"); const esc = (x) => x.replace(/[\\%_]/g, (c) => '\\' + c); const l = `%${esc(String(q))}%`; args.push(`%${esc(normalize(String(q)))}%`, l, l); }
   if (categoryId) { where.push('t.category_id=?'); args.push(Number(categoryId)); }
   if (accountId) { where.push('t.account_id=?'); args.push(Number(accountId)); }
   if (type === 'income') where.push('t.amount>0');
