@@ -107,7 +107,7 @@ function createApp({ db, vault, port, createScraperImpl, lan, updater }) {
 
   // ---- סטטוס וכספת ----
   app.get('/api/status', wrap((req, res) => {
-    const accounts = db.prepare('SELECT id,label,company,last_sync,last_status FROM accounts ORDER BY id').all();
+    const accounts = db.prepare('SELECT id,label,company,last_sync,last_status,paused FROM accounts ORDER BY id').all();
     const failing = accounts.filter((a) => a.last_status && a.last_status !== 'ok');
     const last = db.prepare("SELECT * FROM sync_log WHERE status<>'running' ORDER BY id DESC LIMIT 1").get() || null;
     res.json({
@@ -132,7 +132,7 @@ function createApp({ db, vault, port, createScraperImpl, lan, updater }) {
 
   // ---- חשבונות (פרטי כניסה נשמרים רק בכספת המוצפנת ולעולם לא מוחזרים) ----
   app.get('/api/companies', wrap((req, res) => res.json(listCompanies())));
-  app.get('/api/accounts', wrap((req, res) => res.json(db.prepare('SELECT id,label,company,last_sync,last_status FROM accounts ORDER BY id').all())));
+  app.get('/api/accounts', wrap((req, res) => res.json(db.prepare('SELECT id,label,company,last_sync,last_status,paused FROM accounts ORDER BY id').all())));
   const readCreds = (company, input) => {
     const c = getCompany(company);
     need(c, 'חברה לא מוכרת');
@@ -160,7 +160,7 @@ function createApp({ db, vault, port, createScraperImpl, lan, updater }) {
     const a = db.prepare('SELECT * FROM accounts WHERE id=?').get(intId(req.params.id));
     need(a, 'חשבון לא נמצא');
     vault.set(a.id, readCreds(a.company, req.body.credentials));
-    db.prepare('UPDATE accounts SET last_status=NULL WHERE id=?').run(a.id);
+    db.prepare('UPDATE accounts SET last_status=NULL, paused=0, fail_count=0 WHERE id=?').run(a.id);
     res.json({ ok: true });
   }));
   app.delete('/api/accounts/:id', wrap((req, res) => { admin(req);

@@ -365,3 +365,36 @@ test('יבוא אקסל בסגנון מקס: כמה גיליונות, תאריך
   assert.deepEqual(r.rows.map((x) => [x.description, x.amount]), [['שופרסל דיל', -250.5], ['זיכוי פז', 50], ['נטפליקס', -49.9]]);
   assert.equal(r.columns.charge, 'סכום חיוב');
 });
+
+test('מפסק בטיחות: כשל בכניסה משהה את הכרטיס ולא מנסים שוב אוטומטית', async (t) => {
+  let calls = 0, mode = 'badpass';
+  const fake = () => ({ scrape: async () => {
+    calls++;
+    if (mode === 'badpass') return { success: false, errorType: 'INVALID_PASSWORD', errorMessage: 'bad' };
+    if (mode === 'timeout') return { success: false, errorType: 'TIMEOUT', errorMessage: 'slow' };
+    return { success: true, accounts: [] };
+  } });
+  const ctx = await startApp({ createScraperImpl: fake }); t.after(ctx.close);
+  const { call, db } = ctx;
+  await call('POST', '/api/vault/init', { password: 'סיסמת-על-ארוכה-123' });
+  const id = (await call('POST', '/api/accounts', { label: 'כרטיס', company: 'max', credentials: { username: 'u', password: 'p' } })).json.id;
+  const run = async (body) => { await call('POST', '/api/sync', body); for (let i = 0; i < 100 && ctx.app._state.syncing; i++) await new Promise((r) => setTimeout(r, 20)); };
+  const acct = () => db.prepare('SELECT paused, fail_count FROM accounts WHERE id=?').get(id);
+  await run({});
+  assert.equal(calls, 1); assert.equal(acct().paused, 1, 'סיסמה שגויה משהה מיד');
+  await run({}); await run({});
+  assert.equal(calls, 1, 'עדכון כללי/יומי לא מנסה שוב כרטיס מושהה');
+  assert.equal((await call('GET', '/api/accounts')).json[0].paused, 1);
+  await run({ accountId: id });
+  assert.equal(calls, 2, 'לחיצה מפורשת על הכרטיס כן מנסה (אחרי אזהרה בממשק)');
+  // עדכון פרטי כניסה מחזיר לפעולה
+  assert.equal((await call('PUT', `/api/accounts/${id}/credentials`, { credentials: { username: 'u2', password: 'p2' } })).status, 200);
+  assert.equal(acct().paused, 0); assert.equal(acct().fail_count, 0);
+  // כשל זמני (למשל timeout): משהים רק אחרי שני כשלים רצופים
+  mode = 'timeout';
+  await run({}); assert.equal(acct().paused, 0, 'כשל ראשון בזמן לא משהה');
+  await run({}); assert.equal(acct().paused, 1, 'שני כשלים רצופים משהים');
+  // הצלחה מאפסת
+  mode = 'ok'; await run({ accountId: id });
+  assert.deepEqual({ ...acct() }, { paused: 0, fail_count: 0 });
+});

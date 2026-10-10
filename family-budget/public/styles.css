@@ -378,3 +378,5 @@ details.tech pre { white-space: pre-wrap; word-break: break-word; user-select: a
 .pw-wrap { display: flex; gap: 8px; align-items: center; }
 .pw-wrap input { flex: 1; }
 .cred-input { text-align: left; }
+
+.paused-note { margin-top: 4px; font-size: .9rem; color: var(--ink-2); }

@@ -1,9 +1,9 @@
-' מפעיל את השרת ברקע (בלי חלון שחור) ופותח את האפליקציה בחלון משלה.
-' עם הארגומנט "hidden" מפעיל רק את השרת (להפעלה אוטומטית עם Windows).
+' Starts the server in the background (no black window) and opens the app in its own window.
+' With the argument "hidden" it only starts the server (auto-start with Windows).
 Set sh = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 sh.CurrentDirectory = fso.GetParentFolderName(WScript.ScriptFullName)
-' אם השרת כבר רץ, ההפעלה השנייה נסגרת מעצמה
+' If the server is already running, the second start exits by itself
 sh.Run "cmd /c (if not exist data mkdir data) & node server.js >> data\server.log 2>&1", 0, False
 If WScript.Arguments.Count > 0 Then
   If WScript.Arguments(0) = "hidden" Then WScript.Quit

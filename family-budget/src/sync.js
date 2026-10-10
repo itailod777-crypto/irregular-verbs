@@ -4,6 +4,7 @@ const { getSetting, setSetting } = require('./db');
 const { addTransactions } = require('./store');
 const { notifyFailure } = require('./notify');
 const fs = require('fs');
+const CREDENTIAL_ERRORS = ['INVALID_PASSWORD', 'CHANGE_PASSWORD', 'ACCOUNT_BLOCKED'];
 
 // מציאת דפדפן להרצת הסריקה: משתנה סביבה, אחר כך הדפדפן שהספרייה הורידה, ואחר כך Chrome / Edge שכבר מותקנים במחשב
 function browserCandidates(env = process.env) {
@@ -73,9 +74,13 @@ async function syncAccount({ db, vault, account, createScraperImpl, now = new Da
   const finish = (status, extra = {}) => {
     db.prepare('UPDATE sync_log SET finished_at=?, status=?, added=?, duplicates=?, pending_skipped=?, error=? WHERE id=?')
       .run(new Date().toISOString(), status, extra.added || 0, extra.duplicates || 0, extra.pendingSkipped || 0, extra.error || null, logId);
-    db.prepare('UPDATE accounts SET last_status=?, last_sync=CASE WHEN ?=\'ok\' THEN ? ELSE last_sync END WHERE id=?')
-      .run(status === 'ok' ? 'ok' : (extra.error || status), status, new Date().toISOString(), account.id);
-    return { accountId: account.id, label: account.label, status, ...extra };
+    // מפסק בטיחות: כשל בפרטי הכניסה משהה את הכרטיס מיד; כשל אחר משהה אחרי שני כשלים רצופים. כך לא ננסה שוב ושוב ונחסום את החשבון.
+    const prev = db.prepare('SELECT fail_count FROM accounts WHERE id=?').get(account.id)?.fail_count || 0;
+    const failCount = status === 'ok' ? 0 : prev + 1;
+    const paused = status === 'ok' ? 0 : (CREDENTIAL_ERRORS.includes(extra.errorType) || failCount >= 2 ? 1 : 0);
+    db.prepare('UPDATE accounts SET last_status=?, last_sync=CASE WHEN ?=\'ok\' THEN ? ELSE last_sync END, fail_count=?, paused=? WHERE id=?')
+      .run(status === 'ok' ? 'ok' : (extra.error || status), status, new Date().toISOString(), failCount, paused, account.id);
+    return { accountId: account.id, label: account.label, status, ...extra, paused: !!paused };
   };
   try {
     creds = vault.get(account.id);
@@ -96,7 +101,7 @@ async function syncAccount({ db, vault, account, createScraperImpl, now = new Da
       const type = result.errorType || 'GENERIC';
       const hint = type === 'INVALID_PASSWORD' ? ' (בדוק סיסמה / ייתכן שהחשבון ננעל)'
         : type === 'CHANGE_PASSWORD' ? ' (האתר דורש החלפת סיסמה, עשה זאת ידנית באתר ואז עדכן כאן)' : '';
-      return finish('error', { error: `${type}${hint}: ${redact(result.errorMessage, creds)}` });
+      return finish('error', { errorType: type, error: `${type}${hint}: ${redact(result.errorMessage, creds)}` });
     }
     const { rows, pendingSkipped } = mapTransactions(result.accounts);
     const r = addTransactions(db, rows, { source: 'scraper', accountId: account.id });
@@ -115,12 +120,14 @@ async function runSync({ db, vault, accountId = null, createScraperImpl, now }) 
   if (!acquireLock(db)) throw new Error('משיכה אחרת כבר רצה כרגע.');
   const results = [];
   try {
+    // עדכון כללי / יומי מדלג על כרטיסים מושהים. רק לחיצה ישירה על כרטיס מסוים מנסה שוב (בכוונה, אחרי אזהרה).
     const accounts = accountId
       ? db.prepare('SELECT * FROM accounts WHERE id=?').all(accountId)
-      : db.prepare('SELECT * FROM accounts ORDER BY id').all();
+      : db.prepare('SELECT * FROM accounts WHERE paused=0 ORDER BY id').all();
     for (const account of accounts) results.push(await syncAccount({ db, vault, account, createScraperImpl, now }));
+    if (!accountId) for (const a of db.prepare('SELECT id, label FROM accounts WHERE paused=1').all()) results.push({ accountId: a.id, label: a.label, status: 'paused', paused: true });
   } finally { releaseLock(db); }
-  const failed = results.filter((r) => r.status !== 'ok');
+  const failed = results.filter((r) => r.status === 'error');
   if (failed.length) await notifyFailure(db, `משיכה נכשלה עבור ${failed.length} חשבונות: ${failed.map((f) => f.label).join(', ')}`);
   return results;
 }

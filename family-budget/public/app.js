@@ -96,7 +96,7 @@ async function refreshStatus() {
   if (st.failing.length) {
     box.append(h('div', { class: 'banner crit', role: 'alert' }, h('span', { 'aria-hidden': 'true', class: 'warn-ic' }, '⚠'),
       h('div', { class: 'grow' }, h('strong', {}, st.failing.length === 1 ? 'העדכון נכשל עבור כרטיס אחד' : `העדכון נכשל עבור ${st.failing.length} כרטיסים`),
-        st.failing.map((f) => h('div', { class: 'fail-item' }, h('b', {}, f.label), ': ', friendlyError(f.last_status, f.company),
+        st.failing.map((f) => h('div', { class: 'fail-item' }, h('b', {}, f.label), ': ', friendlyError(f.last_status, f.company), f.paused ? h('div', { class: 'paused-note' }, '⏸ העדכון האוטומטי של הכרטיס הזה הושהה, כדי שלא ינסה שוב ושוב ויחסום את החשבון.') : null,
           h('details', { class: 'tech' }, h('summary', {}, 'פרטים טכניים (אפשר לצלם ולשלוח ל-Claude)'), h('pre', { dir: 'ltr' }, f.last_status))))),
       h('a', { class: 'btn sm', href: '#/accounts' }, 'מה עושים?')));
   }
@@ -542,10 +542,11 @@ async function pageAccounts(view) {
         const bad = a.last_status && a.last_status !== 'ok';
         return h('div', { class: 'acct-card' },
           h('div', { class: 'acct-top' }, icon('bank', 22), h('div', {}, h('div', { class: 'acct-name' }, a.label), h('div', { class: 'acct-co' }, compName(a.company)))),
+          a.paused ? h('span', { class: 'chip crit' }, '⏸ מושהה: לא מנסים שוב אוטומטית') : null,
           bad ? h('span', { class: 'chip crit', title: a.last_status.slice(0, 200) }, '✘ ' + friendlyError(a.last_status, a.company)) : a.last_sync ? h('span', { class: 'chip good' }, '✓ מעודכן') : h('span', { class: 'chip' }, 'עוד לא עודכן'),
           h('div', { class: 'acct-when' }, a.last_sync ? `עדכון אחרון: ${new Date(a.last_sync).toLocaleString('he-IL')}` : ''),
           h('div', { class: 'acct-actions' },
-            h('button', { class: 'btn sm primary', type: 'button', onclick: () => doSync(a.id) }, 'עדכן עכשיו'),
+            h('button', { class: 'btn sm ' + (a.paused ? '' : 'primary'), type: 'button', onclick: () => { if (a.paused && !confirm('הכרטיס הושהה אחרי כשל בכניסה. ניסיון נוסף עם פרטים שגויים עלול לחסום את החשבון באתר.\n\nהאם בדקתם שאתם מצליחים להיכנס לאתר עם אותם פרטים?')) return; doSync(a.id); } }, a.paused ? 'נסה שוב (בזהירות)' : 'עדכן עכשיו'),
             isAdmin() && h('button', { class: 'btn sm', type: 'button', onclick: () => { const c = companies.find((x) => x.id === a.company); if (!c || c.needsSms) return toast('חשבון זה מעודכן דרך הטרמינל', true); credentialsDialog(a, c); } }, 'עדכון סיסמה'),
             isAdmin() && h('button', { class: 'btn sm danger', type: 'button', onclick: async () => { if (!confirm(`להסיר את "${a.label}"? העסקאות שכבר נטענו יישארו.`)) return; await api('DELETE', `/api/accounts/${a.id}`).catch((e) => toast(e.message, true)); await refreshStatus(); render(); } }, 'הסרה')));
       })))));

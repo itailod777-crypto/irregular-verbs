@@ -48,6 +48,9 @@ function openDb(file) {
   db.exec('PRAGMA foreign_keys = ON; PRAGMA journal_mode = DELETE; PRAGMA busy_timeout = 5000;');
   db.exec(SCHEMA);
   if (!db.prepare('PRAGMA table_info(transactions)').all().some((c) => c.name === 'created_by')) db.exec('ALTER TABLE transactions ADD COLUMN created_by INTEGER');
+  const accCols = db.prepare('PRAGMA table_info(accounts)').all().map((c) => c.name);
+  if (!accCols.includes('paused')) db.exec('ALTER TABLE accounts ADD COLUMN paused INTEGER NOT NULL DEFAULT 0');
+  if (!accCols.includes('fail_count')) db.exec('ALTER TABLE accounts ADD COLUMN fail_count INTEGER NOT NULL DEFAULT 0');
   seed(db);
   return db;
 }

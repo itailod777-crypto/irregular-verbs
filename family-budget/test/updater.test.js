@@ -60,10 +60,11 @@ test('API עדכון: מנהל בלבד, לא בזמן עדכון עסקאות, 
   assert.equal(calls.length, 1);
 });
 
-test('restart.bat קיים, בפורמט Windows, ומפעיל את app.vbs מהתיקייה שלו', () => {
-  const raw = fs.readFileSync(path.join(__dirname, '..', 'restart.bat'), 'utf8');
-  assert.ok(raw.includes('\r\n'), 'שורות CRLF');
-  assert.match(raw, /wscript "%~dp0app\.vbs" hidden/);
-  assert.ok(fs.existsSync(path.join(__dirname, '..', 'app.vbs')));
-  assert.match(fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8'), /'cmd\.exe', \['\/c', 'restart\.bat'\]/);
+test('הפעלה מחדש אחרי עדכון: ישירות עם Node, בלי cmd/wscript, עם המתנה לפורט', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  const fn = src.slice(src.indexOf('const restart = () => {'), src.indexOf('app = createApp('));
+  assert.match(fn, /spawn\(process\.execPath, \[path\.join\(__dirname, 'server\.js'\)\]/);
+  assert.ok(!/cmd\.exe|wscript|restart\.bat/.test(fn), 'בלי רכיבים שנכשלו ב-Windows');
+  assert.match(src, /FB_START_DELAY/); assert.match(src, /EADDRINUSE' && startDelay/);
+  assert.ok(!/[^\x00-\x7F]/.test(fs.readFileSync(path.join(__dirname, '..', 'app.vbs'), 'utf8')), 'app.vbs ב-ASCII בלבד');
 });
