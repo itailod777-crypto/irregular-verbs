@@ -3,6 +3,7 @@ chcp 65001 >nul
 cd /d "%~dp0"
 if not exist node_modules (
   echo מתקין תלויות בפעם הראשונה, זה ייקח כמה דקות...
+  set "PUPPETEER_SKIP_DOWNLOAD=1"
   call npm install --omit=dev --no-audit --no-fund
 )
 echo מפעיל את תקציב המשפחה... (אל תסגור את החלון הזה)

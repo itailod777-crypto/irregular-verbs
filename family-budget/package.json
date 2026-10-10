@@ -22,7 +22,7 @@
   "dependencies": {
     "exceljs": "^4.4.0",
     "express": "^5.3.0",
-    "israeli-bank-scrapers": "^6.8.0"
+    "israeli-bank-scrapers": "^6.12.2"
   },
   "main": "desktop/main.js",
   "author": "Family",
