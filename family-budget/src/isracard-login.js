@@ -86,10 +86,30 @@ class PatchedIsracardScraper extends IsracardScraper {
     }
     await page.click('[data-fb="submit"]');
     await page.waitForFunction((src) => !/personalarea\/Login/i.test(location.href) || new RegExp(src).test(document.body.innerText), { timeout: 45000 }, ERROR_RE.source).catch(() => {});
-    if (!/personalarea\/Login/i.test(page.url())) return { success: true };
+    if (!/personalarea\/Login/i.test(page.url())) {
+      // אחרי הכניסה האתר עוד מנווט כמה פעמים; קריאות הנתונים רצות בתוך הדף ונופלות אם הוא באמצע מעבר
+      await page.waitForNetworkIdle({ idleTime: 2000, timeout: 30000 }).catch(() => {});
+      await new Promise((r) => setTimeout(r, 1500));
+      return { success: true };
+    }
     const failed = await page.evaluate((src) => new RegExp(src).test(document.body.innerText), ERROR_RE.source).catch(() => false);
     return { success: false, errorType: failed ? ScraperErrorTypes.InvalidPassword : ScraperErrorTypes.Generic, errorMessage: failed ? undefined : 'Isracard login did not complete' };
   }
 }
+
+PatchedIsracardScraper.prototype.fetchData = async function fetchData() {
+  const base = IsracardScraper.prototype.fetchData;
+  for (let attempt = 1; ; attempt++) {
+    try { return await base.call(this); } catch (e) {
+      const msg = String((e && e.message) || e);
+      if (attempt < 3 && /context was destroyed|navigation|detached|Target closed/i.test(msg)) { // הדף עבר ניווט באמצע: ממתינים ומנסים שוב
+        await this.page.waitForNetworkIdle({ idleTime: 1500, timeout: 20000 }).catch(() => {});
+        continue;
+      }
+      let where = ''; try { where = ` [page: ${new URL(this.page.url()).pathname}]`; } catch {}
+      throw new Error(`Isracard data fetch failed${where}: ${msg}`);
+    }
+  }
+};
 
 module.exports = { PatchedIsracardScraper, openPasswordMode, tagLoginFields, typeInto };
