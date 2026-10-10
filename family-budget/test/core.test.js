@@ -282,3 +282,55 @@ test('שני כרטיסים מאוחדים, סינון לפי כרטיס, הכנ
   const rec = (await call('GET', `/api/recurring?month=2026-09&accountId=${a}`)).json;
   assert.ok(rec.items.every((i) => i.day >= 1 && i.day <= 31));
 });
+
+test('שימו לב: חיוב כפול, התייקרות מנוי, הוצאה חריגה, תקציב', async (t) => {
+  const ctx = await startApp(); t.after(ctx.close);
+  const { db, call } = ctx;
+  const rows = [];
+  for (const m of ['2026-05', '2026-06', '2026-07', '2026-08']) rows.push({ date: `${m}-10`, description: 'נטפליקס', amount: -50 });
+  rows.push({ date: '2026-09-10', description: 'נטפליקס', amount: -65 });          // התייקר
+  rows.push({ date: '2026-09-12', description: 'קפה בבית קפה', amount: -40 }, { date: '2026-09-12', description: 'קפה בבית קפה', amount: -40 }); // כפול
+  rows.push({ date: '2026-09-15', description: 'מחשב נייד חדש', amount: -4500 });   // גדול
+  rows.push({ date: '2026-09-16', description: 'שופרסל', amount: -300 });
+  store.addTransactions(db, rows, { source: 'test' });
+  db.prepare('INSERT INTO budgets VALUES (?,?)').run(catId(db, 'סופרמרקט'), 200);
+  const a = (await call('GET', '/api/alerts?month=2026-09')).json;
+  const types = a.map((x) => x.type);
+  assert.ok(types.includes('duplicate'), 'חיוב כפול');
+  assert.ok(types.includes('price') && a.find((x) => x.type === 'price').title.includes('נטפליקס'), 'התייקרות');
+  assert.ok(types.includes('big') && a.find((x) => x.type === 'big').text.includes('4,500'), 'הוצאה גדולה');
+  assert.ok(types.includes('budget'), 'חריגה מתקציב');
+  assert.ok(a.length <= 6);
+  assert.equal((await call('GET', '/api/alerts?month=oops')).status, 400);
+});
+
+test('יעד חיסכון, תובנות (מפת חום/ימי שבוע/שינוי בקטגוריות), סיכום שנתי וייצוא CSV', async (t) => {
+  const ctx = await startApp(); t.after(ctx.close);
+  const { db, call } = ctx;
+  const demo = generateDemo('2026-09', 6);
+  store.addTransactions(db, demo.bank, { source: 'demo' });
+  store.addTransactions(db, demo.card, { source: 'demo' });
+  store.addManual(db, { date: '2026-09-20', amount: 50, description: '=HYPERLINK("x")', type: 'expense' });
+  assert.equal((await call('PUT', '/api/settings', { savings_goal: '2500' })).status, 200);
+  assert.equal((await call('PUT', '/api/settings', { savings_goal: 'abc' })).status, 400);
+  const s = (await call('GET', '/api/summary?month=2026-09')).json;
+  assert.equal(s.savingsGoal, 2500);
+  const ins = (await call('GET', '/api/insights?month=2026-09')).json;
+  assert.equal(ins.daily.length, 30);
+  assert.ok(Math.abs(ins.daily.reduce((a, b) => a + b, 0) - s.expense) < 0.01, 'סכום הימים = סך ההוצאות');
+  assert.equal(ins.weekday.length, 7); assert.ok(ins.firstWeekday >= 0 && ins.firstWeekday <= 6);
+  assert.ok(ins.categoriesDelta.length > 3 && ins.categoriesDelta[0].cur >= ins.categoriesDelta[1].cur);
+  const y = (await call('GET', '/api/year?year=2026')).json;
+  assert.equal(y.months.length, 12);
+  assert.ok(y.monthsWithData >= 6 && y.expense > 0 && y.categories.length > 0);
+  assert.ok(Math.abs(y.balance - (y.income - y.expense)) < 0.01);
+  assert.equal((await call('GET', '/api/year?year=x')).status, 400);
+  const res = await fetch(`${ctx.base}/api/export.csv?month=2026-09`);
+  const bytes = Buffer.from(await res.arrayBuffer());
+  assert.deepEqual([...bytes.subarray(0, 3)], [0xef, 0xbb, 0xbf], 'BOM כדי שאקסל יקרא עברית');
+  const csv = bytes.toString('utf8');
+  assert.match(res.headers.get('content-disposition'), /attachment/);
+  assert.ok(csv.includes('"תאריך"'));
+  assert.ok(csv.includes('"\'=HYPERLINK'), 'נוסחאות מנוטרלות');
+  assert.ok(csv.split('\r\n').length > 20);
+});

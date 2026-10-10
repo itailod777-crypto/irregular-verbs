@@ -3,7 +3,7 @@
   --bg: #f4f3ef; --surface: #fcfcfb; --surface-2: #f4f3ef;
   --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
   --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,.10);
-  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --exp: #55657d;
   --accent: #1c5cab; --accent-ink: #fff; --accent-soft: #e4eefb;
   --good: #0ca30c; --good-ink: #006300; --warn: #fab219; --warn-ink: #7a5200; --crit: #d03b3b; --crit-ink: #a62323;
   --shadow: 0 1px 2px rgba(11,11,11,.06), 0 6px 20px rgba(11,11,11,.05);
@@ -15,7 +15,7 @@
     --bg: #0d0d0d; --surface: #1a1a19; --surface-2: #232321;
     --ink: #fff; --ink-2: #c3c2b7; --muted: #898781;
     --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,.10);
-    --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --exp: #8aa0bf;
     --accent: #2a78d6; --accent-soft: #1b2a40;
     --good-ink: #0ca30c; --warn-ink: #fab219; --crit-ink: #ec6a6a; --shadow: 0 1px 2px rgba(0,0,0,.4);
   }
@@ -25,7 +25,7 @@
   --bg: #0d0d0d; --surface: #1a1a19; --surface-2: #232321;
   --ink: #fff; --ink-2: #c3c2b7; --muted: #898781;
   --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,.10);
-  --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --exp: #8aa0bf;
   --accent: #2a78d6; --accent-soft: #1b2a40;
   --good-ink: #0ca30c; --warn-ink: #fab219; --crit-ink: #ec6a6a; --shadow: 0 1px 2px rgba(0,0,0,.4);
 }
@@ -282,3 +282,73 @@ summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
 .welcome .steps li { font-size: 1.05rem; }
 
 .rec-group.sep { border-top: 1px solid var(--grid); margin-top: 20px; padding-top: 20px; }
+
+/* ===== שדרוג סטודיו: עומק, תנועה והיררכיה ===== */
+:root { --shadow: 0 1px 2px rgba(11,11,11,.05), 0 8px 28px rgba(11,11,11,.06); --ring: 0 0 0 1px var(--border); }
+.card { transition: box-shadow .2s ease, transform .2s ease; }
+.fade-in > .grid { animation: rise .55s cubic-bezier(.2,.8,.2,1) both; }
+.fade-in > .grid:nth-child(2) { animation-delay: .04s; } .fade-in > .grid:nth-child(3) { animation-delay: .08s; }
+.fade-in > .grid:nth-child(4) { animation-delay: .12s; } .fade-in > .grid:nth-child(5) { animation-delay: .16s; }
+.fade-in > .grid:nth-child(n+6) { animation-delay: .2s; }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+.muted { color: var(--ink-2); }
+.row-gap { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+
+/* שלד טעינה */
+.skeleton-wrap { display: grid; gap: 16px; margin-top: 24px; }
+.skeleton { height: 120px; border-radius: 16px; background: linear-gradient(100deg, var(--surface-2) 30%, var(--surface) 50%, var(--surface-2) 70%); background-size: 200% 100%; animation: shimmer 1.3s linear infinite; border: 1px solid var(--border); }
+.skeleton.tall { height: 230px; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* כרטיס המצב: זוהר עדין ומספרים עם מגמה */
+.status-card { position: relative; overflow: hidden; }
+.status-card::before { content: ""; position: absolute; inset: -40% -10% auto auto; width: 520px; height: 520px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255,255,255,.18), transparent 70%); pointer-events: none; }
+.status-card > * { position: relative; }
+.big { backdrop-filter: blur(6px); }
+.big-spark { margin-top: 6px; opacity: .95; }
+.big-spark svg { display: block; }
+.pos-on { color: #c6ffe6; } .neg-on { color: #ffd2d2; }
+.allowance { margin-top: 16px; padding: 12px 16px; border-radius: 14px; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.2); }
+.allowance b { font-size: 1.08rem; }
+.allowance span { opacity: .9; }
+.goal { margin-top: 12px; }
+.goal-top { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 6px; flex-wrap: wrap; }
+.goal-track { height: 12px; border-radius: 999px; background: rgba(255,255,255,.22); overflow: hidden; }
+.goal-fill { height: 100%; border-radius: 999px; background: #fff; transition: width .8s cubic-bezier(.2,.8,.2,1); }
+
+/* שימו לב */
+.alert-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 10px; }
+.alert { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface-2); }
+.alert p { margin: 2px 0 0; color: var(--ink-2); font-size: .95rem; }
+.alert-ic { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; flex: none; color: #fff; background: var(--s1); }
+.alert.warn .alert-ic { background: #c27c00; } .alert.crit .alert-ic { background: var(--crit); }
+.alert.warn { border-color: color-mix(in srgb, #c27c00 45%, var(--border)); } .alert.crit { border-color: color-mix(in srgb, var(--crit) 50%, var(--border)); }
+
+/* מפת חום */
+.heat { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.heat-h { text-align: center; color: var(--ink-2); font-size: .8rem; font-weight: 700; padding-bottom: 2px; }
+.heat-cell { aspect-ratio: 1.05; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; line-height: 1.1; border: 1px solid var(--border); transition: transform .12s; }
+.heat-cell:hover { transform: scale(1.08); position: relative; z-index: 2; }
+.heat-cell b { font-size: .9rem; }
+.heat-cell small { font-size: .68rem; opacity: .9; }
+.heat-cell.empty { border: 0; background: transparent !important; }
+.heat-cell.future { opacity: .35; }
+.heat-cell.today { outline: 2px solid var(--ink); outline-offset: 1px; }
+.heat-legend { display: flex; align-items: center; gap: 8px; margin-top: 12px; color: var(--ink-2); font-size: .85rem; }
+.heat-legend i { width: 120px; height: 10px; border-radius: 999px; background: linear-gradient(90deg, var(--surface-2), var(--s1)); border: 1px solid var(--border); }
+@media (max-width: 520px) { .heat-cell small { display: none; } .heat { gap: 4px; } }
+
+/* טבלאות צפופות ונקיות */
+table.dense th { position: sticky; top: 0; background: var(--surface); }
+table.dense td, table.dense th { padding: 9px 8px; }
+tr.cur-row td { background: color-mix(in srgb, var(--s1) 8%, transparent); font-weight: 700; }
+.stat .value { font-size: 2rem; }
+@media print { .fade-in > .grid { animation: none; } .status-card::before { display: none; } }
+
+.nowrap { white-space: nowrap; }
+
+/* מונע מתוכן רחב (גרפים/טבלאות) להרחיב את העמוד בטלפון */
+.grid > * { min-width: 0; }
+@media (max-width: 900px) { .g3, .g-main, .g2 { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 520px) { .g4 { grid-template-columns: minmax(0, 1fr); } }
+.chart-box, .card { max-width: 100%; }

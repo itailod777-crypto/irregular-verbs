@@ -194,7 +194,8 @@ function summary(db, month, accountId = null) {
   if (!accountId) { const e = effectiveIncome(db, month, income); income = e.income; incomeSource = e.source; }
   const { split, trend: st } = splitSummary(db, month, accountId);
   for (const t of trend) { const x = st.get(t.month); t.recurring = x ? x.recurring : 0; t.oneTime = x ? x.oneTime : 0; }
-  return { month, income, incomeComputed, incomeSource, expense, balance: income - expense, transfers, expenses, incomes, trend, split };
+  const goal = getSetting(db, 'savings_goal', null);
+  return { month, savingsGoal: goal === null || goal === '' ? null : Number(goal), income, incomeComputed, incomeSource, expense, balance: income - expense, transfers, expenses, incomes, trend, split };
 }
 
 // תובנות לגרפים: קצב הוצאה מצטבר מול החודש הקודם, בתי העסק הגדולים, וחלוקה לפי כרטיס
@@ -226,10 +227,63 @@ function insights(db, month, accountId = null) {
     .sort((a, b) => b.total - a.total).slice(0, 8);
   const byAccount = db.prepare(`SELECT a.id, COALESCE(a.label, 'ללא כרטיס (ידני או מקובץ)') label, SUM(-t.amount) total FROM transactions t JOIN categories c ON c.id=t.category_id
     LEFT JOIN accounts a ON a.id=t.account_id WHERE t.ignored=0 AND c.kind='expense' AND substr(t.date,1,7)=? GROUP BY a.id ORDER BY total DESC`).all(month).filter((r) => r.total > 0);
+  const dim = daysIn(month), daily = new Array(dim).fill(0);
+  for (const r of rows) if (r.date.startsWith(month) && (!accountId || r.account_id === accountId)) daily[Number(r.date.slice(8, 10)) - 1] += -r.amount;
+  // ממוצע הוצאה לכל יום בשבוע (ראשון=0), עד היום אם זה החודש הנוכחי
+  const wd = Array.from({ length: 7 }, () => ({ sum: 0, days: 0 }));
+  const lastDay = isNow ? now.getDate() : dim;
+  for (let d = 1; d <= lastDay; d++) { const w = new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, d)).getUTCDay(); wd[w].sum += daily[d - 1]; wd[w].days++; }
+  const weekday = wd.map((x) => (x.days ? Math.round((x.sum / x.days) * 100) / 100 : 0));
+  const firstWeekday = new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 1)).getUTCDay();
+  const cats = new Map();
+  for (const r of db.prepare(`SELECT c.id, c.name, c.color, substr(t.date,1,7) m, SUM(-t.amount) total FROM transactions t JOIN categories c ON c.id=t.category_id
+    WHERE t.ignored=0 AND c.kind='expense' AND substr(t.date,1,7) IN (?,?) AND (? IS NULL OR t.account_id=?) GROUP BY c.id, m`).all(month, prev, accountId, accountId)) {
+    const c = cats.get(r.id) || { id: r.id, name: r.name, color: r.color, cur: 0, prev: 0 };
+    c[r.m === month ? 'cur' : 'prev'] = r.total; cats.set(r.id, c);
+  }
+  const categoriesDelta = [...cats.values()].filter((c) => c.cur > 0 || c.prev > 0).sort((a, b) => b.cur - a.cur).slice(0, 8).map((c) => ({ ...c, delta: c.cur - c.prev }));
   return {
-    month, prevMonth: prev, daysInMonth: daysIn(month), todayDay: isNow ? now.getDate() : null,
-    current: cum(month, isNow ? now.getDate() : 99), previous: cum(prev, 99), topMerchants, byAccount,
+    month, prevMonth: prev, daysInMonth: dim, todayDay: isNow ? now.getDate() : null, firstWeekday,
+    current: cum(month, isNow ? now.getDate() : 99), previous: cum(prev, 99), daily, weekday, categoriesDelta, topMerchants, byAccount,
   };
+}
+
+// סיכום שנתי: הכנסות והוצאות לכל חודש, והקטגוריות הגדולות של השנה
+function yearSummary(db, year, accountId = null) {
+  if (!/^\d{4}$/.test(String(year))) throw new Error('שנה לא תקינה');
+  const raw = db.prepare(`SELECT substr(t.date,1,7) m, c.kind, SUM(t.amount) total FROM transactions t JOIN categories c ON c.id=t.category_id
+    WHERE t.ignored=0 AND c.kind<>'transfer' AND substr(t.date,1,4)=? AND (? IS NULL OR t.account_id=?) GROUP BY m, c.kind`).all(String(year), accountId, accountId);
+  const months = [];
+  for (let i = 1; i <= 12; i++) {
+    const m = `${year}-${String(i).padStart(2, '0')}`;
+    const computed = raw.find((x) => x.m === m && x.kind === 'income')?.total || 0;
+    const expense = -(raw.find((x) => x.m === m && x.kind === 'expense')?.total || 0);
+    let income = computed;
+    if (!accountId && (computed > 0 || expense > 0)) income = effectiveIncome(db, m, computed).income;
+    months.push({ month: m, income, expense, balance: income - expense, hasData: computed > 0 || expense !== 0 });
+  }
+  const active = months.filter((m) => m.hasData);
+  const income = active.reduce((a, m) => a + m.income, 0), expense = active.reduce((a, m) => a + m.expense, 0);
+  const categories = db.prepare(`SELECT c.id, c.name, c.color, SUM(-t.amount) total FROM transactions t JOIN categories c ON c.id=t.category_id
+    WHERE t.ignored=0 AND c.kind='expense' AND substr(t.date,1,4)=? AND (? IS NULL OR t.account_id=?) GROUP BY c.id HAVING total > 0 ORDER BY total DESC LIMIT 10`).all(String(year), accountId, accountId);
+  const withBal = active.filter((m) => m.income > 0);
+  const best = withBal.length ? withBal.reduce((a, b) => (b.balance > a.balance ? b : a)) : null;
+  const worst = withBal.length ? withBal.reduce((a, b) => (b.balance < a.balance ? b : a)) : null;
+  return { year: String(year), months, income, expense, balance: income - expense, savingsRate: income > 0 ? (income - expense) / income : null, monthsWithData: active.length, avgExpense: active.length ? expense / active.length : 0, categories, best, worst };
+}
+
+// ייצוא עסקאות ל-CSV (נפתח באקסל). תאים שמתחילים בתו מסוכן מקבלים גרש כדי למנוע הזרקת נוסחאות.
+function exportCsv(db, { month, accountId }) {
+  const where = ['1=1'], args = [];
+  if (month && month !== 'all') { monthRange(month); where.push('substr(t.date,1,7)=?'); args.push(month); }
+  if (accountId) { where.push('t.account_id=?'); args.push(accountId); }
+  const rows = db.prepare(`SELECT t.date, t.description, t.amount, c.name category, COALESCE(a.label,'') card, t.source FROM transactions t
+    JOIN categories c ON c.id=t.category_id LEFT JOIN accounts a ON a.id=t.account_id WHERE ${where.join(' AND ')} ORDER BY t.date, t.id`).all(...args);
+  const cell = (v) => { let x = String(v ?? ''); if (/^[=+\-@\t\r]/.test(x)) x = "'" + x; return `"${x.replace(/"/g, '""')}"`; };
+  const src = { scraper: 'עדכון אוטומטי', import: 'קובץ', manual: 'ידני', demo: 'דוגמה' };
+  const lines = [['תאריך', 'תיאור', 'סכום', 'קטגוריה', 'כרטיס', 'מקור'].map(cell).join(',')];
+  for (const r of rows) lines.push([r.date, r.description, r.amount.toFixed(2), r.category, r.card, src[r.source] || r.source].map((v, i) => (i === 2 ? v : cell(v))).join(','));
+  return '\ufeff' + lines.join('\r\n') + '\r\n';
 }
 
 function listTransactions(db, { month, q, categoryId, accountId, type, limit = 200, offset = 0 }) {
@@ -251,5 +305,5 @@ function listTransactions(db, { month, q, categoryId, accountId, type, limit = 2
 
 module.exports = {
   addTransactions, previewDuplicates, addManual, setCategory, createRule, applyRule, recategorizeAll,
-  summary, listTransactions, insights, setIncome, addMonths, loadRules, MONTH_RE,
+  summary, listTransactions, insights, setIncome, yearSummary, exportCsv, addMonths, loadRules, MONTH_RE,
 };

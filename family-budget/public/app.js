@@ -13,16 +13,17 @@ const ICONS = {
   print: 'M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2M6 14h12v7H6z',
   prev: 'M9 6l6 6-6 6', next: 'M15 6l-6 6 6 6',
   lock: 'M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4',
+  calendar: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
   coin: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM9 9.5C9 8.1 10.3 7 12 7s3 1.1 3 2.5S13.7 12 12 12s-3 1.1-3 2.5S10.3 17 12 17s3-1.1 3-2.5M12 5.5V7M12 17v1.5',
 };
 function icon(name, size = 20) {
   return s('svg', { viewBox: '0 0 24 24', width: size, height: size, fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true' }, s('path', { d: ICONS[name] }));
 }
 
-const state = { month: null, months: [], cats: [], accounts: [], account: null, status: null, route: 'home' };
+const state = { year: null, month: null, months: [], cats: [], accounts: [], account: null, status: null, route: 'home' };
 const ROUTES = [
   ['home', 'בית', 'home'], ['recurring', 'מנויים והוצאות קבועות', 'repeat'], ['onetime', 'הוצאות חד-פעמיות', 'bolt'],
-  ['transactions', 'כל העסקאות', 'list'], ['budget', 'תקציב', 'wallet'], ['accounts', 'כרטיסים וחשבונות', 'bank'],
+  ['transactions', 'כל העסקאות', 'list'], ['budget', 'תקציב', 'wallet'], ['year', 'סיכום שנתי', 'calendar'], ['accounts', 'כרטיסים וחשבונות', 'bank'],
 ];
 const catName = (id) => state.cats.find((c) => c.id === id)?.name || '';
 const acctLabel = (id) => state.accounts.find((a) => a.id === id)?.label || '';
@@ -113,7 +114,9 @@ async function doSync(accountId) {
   if (state.months.length && !state.months.includes(state.month)) setMonth(state.months.includes(currentMonth()) ? currentMonth() : state.months[0], true);
   const bad = state.status.failing.length;
   toast(bad ? 'העדכון הסתיים עם שגיאה. פרטים למעלה.' : 'העסקאות עודכנו', !!bad);
-  render();
+  // לא מציירים מחדש אם המשתמש באמצע מילוי טופס (קובץ שנבחר, טקסט שהוקלד), כדי לא למחוק לו את מה שהזין
+  const typing = [...document.querySelectorAll('#view input, #view select')].some((i) => (i.type === 'file' ? i.files.length : ['text', 'password', 'number', 'search'].includes(i.type) && i.value));
+  if (!typing) render();
 }
 
 // ---------- ניווט ----------
@@ -125,7 +128,7 @@ function render() {
   state.route = PAGES[route] ? route : 'home';
   document.querySelectorAll('#tabs a').forEach((a) => { if (a.dataset.route === state.route) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   const root = document.getElementById('view');
-  const view = h('div', {}, h('div', { class: 'empty' }, 'טוען...')); // לכל ניווט מכל משלו, כך שדף ישן שמסיים באיחור לא דורס את החדש
+  const view = h('div', {}, h('div', { class: 'skeleton-wrap', 'aria-busy': 'true' }, h('div', { class: 'skeleton tall' }), h('div', { class: 'skeleton' }), h('div', { class: 'skeleton' }))); // לכל ניווט מכל משלו, כך שדף ישן שמסיים באיחור לא דורס את החדש
   root.replaceChildren(view);
   PAGES[state.route](view).catch((e) => view.replaceChildren(h('div', { class: 'card empty' }, h('h3', {}, 'משהו השתבש'), e.message)));
 }
@@ -160,52 +163,94 @@ function incomeDialog(sum) {
     });
 }
 
+function animateCounts(root) {
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  root.querySelectorAll('[data-v]').forEach((el) => {
+    const target = Number(el.dataset.v), t0 = performance.now();
+    const tick = (now) => { const k = Math.min(1, (now - t0) / 700); el.textContent = fmt(k < 1 ? target * (1 - (1 - k) ** 3) : target); if (k < 1) requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  });
+}
+
 async function pageHome(view) {
   if (!state.months.length && !state.accounts.length) { view.replaceChildren(welcomeCard()); return; }
-  const [sum, rec, ins, one] = await Promise.all([api('GET', q('/api/summary')), api('GET', q('/api/recurring')), api('GET', q('/api/insights')), api('GET', q('/api/onetime'))]);
+  const [sum, rec, ins, one, al] = await Promise.all([api('GET', q('/api/summary')), api('GET', q('/api/recurring')), api('GET', q('/api/insights')), api('GET', q('/api/onetime')), api('GET', q('/api/alerts'))]);
   const v = verdictOf(sum, rec, ins);
   const src = { transactions: 'לפי העסקאות בחשבון', manual: 'הוזן על ידכם', default: 'סכום קבוע שהזנתם', none: 'עדיין לא הוזן' }[sum.incomeSource];
   const frag = h('div', { class: 'fade-in' });
   frag.append(pageHead(`איך נראה ${monthLabel(state.month)}`, state.account ? `מוצג: ${acctLabel(state.account)}` : state.accounts.length > 1 ? 'כל הכרטיסים מאוחדים' : 'סיכום פשוט של הכסף שלכם'));
+  const spark = (vals) => h('div', { class: 'big-spark', title: '6 החודשים האחרונים' }, sparkline(vals, 'rgba(255,255,255,.95)', 'rgba(0,0,0,.28)', 120, 30));
+  const incSeries = sum.trend.map((t) => t.income), expSeries = sum.trend.map((t) => t.expense), balSeries = sum.trend.map((t) => Math.max(0, t.income - t.expense));
   const editBtn = h('button', { class: 'btn sm light', type: 'button', onclick: () => incomeDialog(sum), disabled: !!state.account, title: state.account ? 'ההכנסה מוזנת לכל הכרטיסים יחד' : null }, '✎ ', sum.incomeSource === 'none' ? 'כתבו כמה נכנס' : 'שינוי');
+  const extras = [];
+  if (ins.todayDay && sum.income > 0) {
+    const remaining = sum.income - sum.expense - rec.expectedRest, daysLeft = ins.daysInMonth - ins.todayDay + 1;
+    extras.push(h('div', { class: 'allowance' }, h('b', {}, remaining > 0 ? `אפשר להוציא עוד כ-${fmt(remaining / daysLeft)} ליום` : 'כבר הגעתם לתקרת החודש'),
+      h('span', {}, remaining > 0 ? ` עד סוף החודש (${daysLeft} ימים), אחרי שהוצאות קבועות שעוד לא ירדו.` : ` נשארו ${daysLeft} ימים עד סוף החודש.`)));
+  }
+  if (sum.savingsGoal && sum.income > 0) {
+    const saved = Math.max(0, sum.balance), k = Math.min(1, saved / sum.savingsGoal);
+    extras.push(h('div', { class: 'goal' }, h('div', { class: 'goal-top' }, h('b', {}, k >= 1 ? '✓ הגעתם ליעד החיסכון' : 'יעד חיסכון'), h('span', { class: 'num' }, `${fmt(saved)} מתוך ${fmt(sum.savingsGoal)}`)),
+      h('div', { class: 'goal-track', role: 'progressbar', 'aria-valuenow': Math.round(k * 100), 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': 'התקדמות ליעד החיסכון' }, h('div', { class: 'goal-fill', style: { width: `${k * 100}%` } }))));
+  }
   frag.append(h('div', { class: `card status-card tone-${v.tone}` },
     h('div', { class: 'verdict' }, h('span', { class: 'verdict-ic', 'aria-hidden': 'true' }, VERDICT_ICON[v.tone]), h('div', {}, h('div', { class: 'verdict-title' }, v.title), h('div', { class: 'verdict-text' }, v.text))),
     h('div', { class: 'trio' },
-      h('div', { class: 'big' }, h('div', { class: 'big-label' }, 'נכנס'), h('div', { class: 'big-value num' }, sum.income > 0 ? fmt(sum.income) : '—'), h('div', { class: 'big-note' }, src), editBtn),
-      h('div', { class: 'big' }, h('div', { class: 'big-label' }, 'יצא'), h('div', { class: 'big-value num' }, fmt(sum.expense)), h('div', { class: 'big-note' }, deltaNote(sum))),
-      h('div', { class: 'big' }, h('div', { class: 'big-label' }, 'נשאר'), h('div', { class: 'big-value num ' + (sum.income > 0 ? (sum.balance >= 0 ? 'pos-on' : 'neg-on') : '') }, sum.income > 0 ? fmt(sum.balance) : '—'),
-        h('div', { class: 'big-note' }, v.projected && v.projBal !== undefined ? `צפי לסוף החודש: ${fmt(v.projBal)}` : sum.income > 0 ? 'ההכנסה פחות ההוצאות' : 'נחשב אחרי שמזינים הכנסה')))));
+      h('div', { class: 'big' }, h('div', { class: 'big-label' }, 'נכנס'), h('div', { class: 'big-value num', 'data-v': sum.income > 0 ? sum.income : null }, sum.income > 0 ? fmt(sum.income) : '—'), h('div', { class: 'big-note' }, src), spark(incSeries), editBtn),
+      h('div', { class: 'big' }, h('div', { class: 'big-label' }, 'יצא'), h('div', { class: 'big-value num', 'data-v': sum.expense }, fmt(sum.expense)), h('div', { class: 'big-note' }, deltaNote(sum)), spark(expSeries)),
+      h('div', { class: 'big' }, h('div', { class: 'big-label' }, 'נשאר'), h('div', { class: 'big-value num ' + (sum.income > 0 ? (sum.balance >= 0 ? 'pos-on' : 'neg-on') : ''), 'data-v': sum.income > 0 ? sum.balance : null }, sum.income > 0 ? fmt(sum.balance) : '—'),
+        h('div', { class: 'big-note' }, v.projected && v.projBal !== undefined ? `צפי לסוף החודש: ${fmt(v.projBal)}` : sum.income > 0 ? 'ההכנסה פחות ההוצאות' : 'נחשב אחרי שמזינים הכנסה'), sum.income > 0 ? spark(balSeries) : null)),
+    ...extras));
+
+  // שימו לב
+  frag.append(h('div', { class: 'grid' }, h('div', { class: 'card alerts' }, h('div', { class: 'row-between' }, h('h2', {}, 'שימו לב'), al.length ? h('span', { class: 'chip warn' }, `${al.length} דברים שכדאי לבדוק`) : h('span', { class: 'chip good' }, '✓ הכול נראה תקין')),
+    al.length ? h('ul', { class: 'alert-list' }, al.map((a) => h('li', { class: 'alert ' + a.level }, h('span', { class: 'alert-ic', 'aria-hidden': 'true' }, a.level === 'info' ? 'i' : '!'), h('div', {}, h('b', {}, a.title), h('p', {}, a.text)))))
+      : h('p', { class: 'sub' }, 'לא נמצא חיוב כפול, מנוי שהתייקר, הוצאה חריגה או חריגה מהתקציב ב' + monthLabel(state.month) + '.'))));
 
   // קבועות / חד-פעמיות
   frag.append(h('div', { class: 'grid g2' },
     h('a', { class: 'card link-card', href: '#/recurring' }, h('div', { class: 'lc-top' }, h('span', { class: 'dot big-dot', style: { background: 'var(--s1)' } }), h('b', {}, 'הוצאות קבועות'), h('span', { class: 'spacer' }), h('span', { class: 'go' }, 'לכל המנויים ←')),
-      h('div', { class: 'lc-value num' }, fmt(sum.split.recurring)), h('p', { class: 'sub' }, 'מנויים, חשבונות, ארנונה וביטוחים: דברים שחוזרים כל חודש.'), rec.expectedRest > 0 ? h('span', { class: 'chip warn' }, `עוד צפוי ~${fmt(rec.expectedRest)} החודש`) : null),
+      h('div', { class: 'lc-value num', 'data-v': sum.split.recurring }, fmt(sum.split.recurring)), h('p', { class: 'sub' }, 'מנויים, חשבונות, ארנונה וביטוחים: דברים שחוזרים כל חודש.'), rec.expectedRest > 0 ? h('span', { class: 'chip warn' }, `עוד צפוי ~${fmt(rec.expectedRest)} החודש`) : null),
     h('a', { class: 'card link-card', href: '#/onetime' }, h('div', { class: 'lc-top' }, h('span', { class: 'dot big-dot', style: { background: 'var(--s2)' } }), h('b', {}, 'הוצאות חד-פעמיות'), h('span', { class: 'spacer' }), h('span', { class: 'go' }, 'לכל ההוצאות ←')),
-      h('div', { class: 'lc-value num' }, fmt(sum.split.oneTime)), h('p', { class: 'sub' }, 'קניות, בילויים, תיקונים ועוד: מה שלא חוזר כל חודש.'), splitBar(sum.split.recurring, sum.split.oneTime))));
+      h('div', { class: 'lc-value num', 'data-v': sum.split.oneTime }, fmt(sum.split.oneTime)), h('p', { class: 'sub' }, 'קניות, בילויים, תיקונים ועוד: מה שלא חוזר כל חודש.'), splitBar(sum.split.recurring, sum.split.oneTime))));
 
-  // גרפים
+  // קצב + חלוקה
   const cur = ins.current.length ? ins.current[ins.current.length - 1] : 0;
   const prevAt = ins.todayDay ? ins.previous[ins.todayDay - 1] ?? 0 : ins.previous[ins.previous.length - 1] ?? 0;
   const diff = cur - prevAt;
-  const paceNote = (ins.previous.length ? h('p', { class: 'pace-note' }, ins.todayDay ? `עד היום (יום ${ins.todayDay}) הוצאתם ${fmt(cur)}. באותו שלב בחודש שעבר: ${fmt(prevAt)}. ` : `החודש הוצאתם ${fmt(cur)}, בחודש שעבר ${fmt(prevAt)}. `,
-    h('span', { class: 'chip ' + (diff <= 0 ? 'good' : 'warn') }, diff <= 0 ? `✓ פחות ב-${fmt(-diff)}` : `▲ יותר ב-${fmt(diff)}`)) : h('p', { class: 'pace-note' }, 'אין עדיין חודש קודם להשוואה.'));
+  const paceNote = ins.previous.length ? h('p', { class: 'pace-note' }, ins.todayDay ? `עד היום (יום ${ins.todayDay}) הוצאתם ${fmt(cur)}. באותו שלב בחודש שעבר: ${fmt(prevAt)}. ` : `החודש הוצאתם ${fmt(cur)}, בחודש שעבר ${fmt(prevAt)}. `,
+    h('span', { class: 'chip ' + (diff <= 0 ? 'good' : 'warn') }, diff <= 0 ? `✓ פחות ב-${fmt(-diff)}` : `▲ יותר ב-${fmt(diff)}`)) : h('p', { class: 'pace-note' }, 'אין עדיין חודש קודם להשוואה.');
   frag.append(h('div', { class: 'grid g-main' },
     card('האם מוציאים יותר מהחודש שעבר?', 'כמה כסף יצא עד כל יום בחודש', paceChart(ins), paceNote),
-    card('כמה מההוצאות קבועות וכמה חד-פעמיות?', 'החלוקה של כל מה שיצא החודש', h('div', { class: 'donut-wrap' }, splitDonut(sum.split.recurring, sum.split.oneTime),
+    card('כמה קבוע וכמה חד-פעמי?', 'החלוקה של כל מה שיצא החודש', h('div', { class: 'donut-wrap' }, splitDonut(sum.split.recurring, sum.split.oneTime),
       h('div', { class: 'donut-legend' }, splitLine('var(--s1)', 'קבועות', sum.split.recurring, sum.expense), splitLine('var(--s2)', 'חד-פעמיות', sum.split.oneTime, sum.expense))))));
-  frag.append(h('div', { class: 'grid' }, card('הכנסות מול הוצאות ב-6 החודשים האחרונים', 'כל עמודה היא חודש: למטה מה שקבוע, למעלה מה שחד-פעמי, והקו הטורקיז הוא מה שנכנס', trendChart(sum.trend))));
-  const withBudget = sum.expenses.filter((e) => e.budget);
+
+  // 6 חודשים: גרף + טבלה
+  frag.append(h('div', { class: 'grid g-main' },
+    card('הכנסות מול הוצאות ב-6 החודשים האחרונים', 'למטה מה שקבוע, למעלה מה שחד-פעמי, והקו הטורקיז הוא מה שנכנס', trendChart(sum.trend)),
+    card('שישה חודשים במספרים', 'כמה נשאר וכמה אחוז מההכנסה נחסך', monthsTable(sum.trend))));
+
+  // מפת חום + ימי שבוע
+  frag.append(h('div', { class: 'grid g2' },
+    card('באילו ימים יוצא הכי הרבה כסף?', 'כל ריבוע הוא יום. ככל שהצבע כהה יותר, יצא יותר.', heatmapCalendar(ins)),
+    card('באילו ימי שבוע מוציאים הכי הרבה?', 'ממוצע הוצאה ביום, לפי יום בשבוע', weekdayChart(ins.weekday))));
+
+  // קטגוריות + מה השתנה
   frag.append(h('div', { class: 'grid g2' },
     card('על מה הכסף הולך?', 'הקטגוריות הגדולות החודש', categoryBars(sum.expenses, { onlyTop: 8, total: sum.expense })),
-    card('איפה מוציאים הכי הרבה?', 'בתי העסק שקיבלו הכי הרבה כסף החודש', rankBars(ins.topMerchants))));
-  const extra = [];
+    card('מה השתנה מהחודש שעבר?', 'כל קטגוריה מול החודש הקודם. ▲ אדום = יצא יותר', deltaTable(ins.categoriesDelta))));
+
+  const withBudget = sum.expenses.filter((e) => e.budget);
+  const extra = [card('איפה מוציאים הכי הרבה?', 'בתי העסק שקיבלו הכי הרבה כסף החודש', rankBars(ins.topMerchants))];
   if (!state.account && ins.byAccount.length > 1) extra.push(card('כמה הוציא כל כרטיס?', 'החלוקה בין הכרטיסים והחשבונות', rankBars(ins.byAccount.map((a) => ({ name: a.label, total: a.total })))));
-  extra.push(card('התקציב החודשי', 'כמה נשאר בכל קטגוריה שהגדרתם לה תקציב', withBudget.length ? categoryBars(withBudget, { onlyTop: 10 }) : h('div', { class: 'empty small' }, h('p', {}, 'עוד לא הגדרתם תקציב. זה עוזר לא לחרוג.'), h('a', { class: 'btn', href: '#/budget' }, 'להגדרת תקציב'))));
-  frag.append(h('div', { class: 'grid ' + (extra.length > 1 ? 'g2' : '') }, ...extra));
+  else extra.push(card('התקציב החודשי', 'כמה נשאר בכל קטגוריה שהגדרתם לה תקציב', withBudget.length ? categoryBars(withBudget, { onlyTop: 10 }) : h('div', { class: 'empty small' }, h('p', {}, 'עוד לא הגדרתם תקציב. זה עוזר לא לחרוג.'), h('a', { class: 'btn', href: '#/budget' }, 'להגדרת תקציב'))));
+  frag.append(h('div', { class: 'grid g2' }, ...extra));
+  if (!state.account && ins.byAccount.length > 1) frag.append(h('div', { class: 'grid' }, card('התקציב החודשי', 'כמה נשאר בכל קטגוריה שהגדרתם לה תקציב', withBudget.length ? categoryBars(withBudget, { onlyTop: 10 }) : h('div', { class: 'empty small' }, h('p', {}, 'עוד לא הגדרתם תקציב. זה עוזר לא לחרוג.'), h('a', { class: 'btn', href: '#/budget' }, 'להגדרת תקציב')))));
   frag.append(h('div', { class: 'grid' }, h('div', { class: 'card' },
-    h('div', { class: 'row-between' }, h('h2', {}, 'סיכום החודש במילים'), h('a', { class: 'btn sm no-print', href: `/report.html?month=${state.month}`, target: '_blank', rel: 'noopener' }, icon('print', 16), 'להדפסה')),
+    h('div', { class: 'row-between' }, h('h2', {}, 'סיכום החודש במילים'), h('span', { class: 'row-gap' }, h('a', { class: 'btn sm', href: `/api/export.csv?month=${state.month}${state.account ? `&accountId=${state.account}` : ''}` }, 'הורדה לאקסל'), h('a', { class: 'btn sm no-print', href: `/report.html?month=${state.month}`, target: '_blank', rel: 'noopener' }, icon('print', 16), 'להדפסה'))),
     h('p', { class: 'summary-text' }, ...summaryParts(sum, rec, one)))));
   view.replaceChildren(frag);
+  animateCounts(view);
 }
 
 function splitLine(color, label, value, total) {
@@ -322,7 +367,7 @@ async function pageTransactions(view) {
   [qin, cat, type].forEach((el) => el.addEventListener(el === qin ? 'input' : 'change', debounce(load, 250)));
   allm.querySelector('input').addEventListener('change', load);
   view.replaceChildren(h('div', { class: 'fade-in' },
-    pageHead('כל העסקאות', `מוצגות העסקאות של ${monthLabel(state.month)}. אפשר לתקן קטגוריה בכל שורה.`, h('button', { class: 'btn primary', type: 'button', onclick: () => addTxDialog(load) }, icon('plus', 18), 'הוספת הוצאה או הכנסה')),
+    pageHead('כל העסקאות', `מוצגות העסקאות של ${monthLabel(state.month)}. אפשר לתקן קטגוריה בכל שורה.`, h('span', { class: 'row-gap' }, h('button', { class: 'btn', type: 'button', onclick: () => { location.href = `/api/export.csv?month=${allm.querySelector('input').checked ? 'all' : state.month}${state.account ? `&accountId=${state.account}` : ''}`; } }, 'הורדה לאקסל'), h('button', { class: 'btn primary', type: 'button', onclick: () => addTxDialog(load) }, icon('plus', 18), 'הוספת הוצאה או הכנסה'))),
     h('div', { class: 'grid' }, h('div', { class: 'card' }, h('div', { class: 'row' }, qin, cat, type, allm), count, list))));
   await load();
 }
@@ -360,7 +405,10 @@ function addTxDialog(done) {
 
 // ---------- תקציב ----------
 async function pageBudget(view) {
-  const [sum, budgets, rules] = await Promise.all([api('GET', q('/api/summary')), api('GET', '/api/budgets'), api('GET', '/api/rules')]);
+  const [sum, budgets, rules, settings] = await Promise.all([api('GET', q('/api/summary')), api('GET', '/api/budgets'), api('GET', '/api/rules'), api('GET', '/api/settings')]);
+  const goalIn = h('input', { type: 'number', min: '0', step: '100', inputMode: 'numeric', value: settings.savings_goal || '', placeholder: 'למשל 2000', 'aria-label': 'יעד חיסכון חודשי' });
+  const goalSave = h('button', { class: 'btn primary', type: 'button' }, 'שמירת היעד');
+  goalSave.addEventListener('click', busy(goalSave, async () => { await api('PUT', '/api/settings', { savings_goal: goalIn.value }); toast(goalIn.value ? 'היעד נשמר' : 'היעד בוטל'); }));
   const bmap = new Map(budgets.map((b) => [b.category_id, b.amount]));
   const spent = new Map(sum.expenses.map((e) => [e.id, e.total]));
   const rows = state.cats.filter((c) => c.kind === 'expense').map((c) => {
@@ -383,6 +431,7 @@ async function pageBudget(view) {
     pageHead('תקציב', `כמה רוצים להוציא לכל דבר בחודש. הניצול מחושב עבור ${monthLabel(state.month)}.`),
     h('div', { class: 'grid' }, card('תקציב חודשי לכל קטגוריה', 'כתבו סכום ליד כל קטגוריה שרוצים לעקוב אחריה. השאירו ריק כדי לא להגביל.',
       h('div', { class: 'table-wrap' }, h('table', {}, h('thead', {}, h('tr', {}, ['קטגוריה', 'יצא החודש', 'תקציב (₪)', ''].map((t, i) => h('th', { class: i === 1 ? 'amt' : '' }, t)))), h('tbody', {}, rows))))),
+    h('div', { class: 'grid' }, card('יעד חיסכון חודשי', 'כמה רוצים לחסוך כל חודש. במסך הבית יופיע פס שמראה כמה כבר חסכתם. השאירו ריק כדי לבטל.', h('div', { class: 'row' }, goalIn, goalSave))),
     h('div', { class: 'grid' }, card('הקטגוריות שלי', 'אפשר להוסיף קטגוריה חדשה, למשל "חתונות" או "חיות מחמד"', h('div', { class: 'row' }, name, kind, color, rec, addCat), catList)),
     mine.length ? h('div', { class: 'grid' }, h('div', { class: 'card' }, h('details', {}, h('summary', {}, `הכללים שלמדתי מהתיקונים שלכם (${mine.length})`),
       h('p', { class: 'sub' }, 'כשמתקנים קטגוריה של עסקה, האפליקציה זוכרת את זה. אפשר למחוק כלל שלא נכון.'),
@@ -507,7 +556,30 @@ async function pageAccounts(view) {
   view.replaceChildren(frag);
 }
 
-const PAGES = { home: pageHome, recurring: pageRecurring, onetime: pageOneTime, transactions: pageTransactions, budget: pageBudget, accounts: pageAccounts };
+
+// ---------- סיכום שנתי ----------
+async function pageYear(view) {
+  const year = state.year || state.month.slice(0, 4);
+  const y = await api('GET', `/api/year?year=${year}${state.account ? `&accountId=${state.account}` : ''}`);
+  const shift = (d) => { state.year = String(Number(year) + d); render(); };
+  const active = y.months.filter((m) => m.hasData);
+  const noteBits = [];
+  if (y.best) noteBits.push(`החודש הכי טוב: ${monthLabel(y.best.month)} (נשארו ${fmt(y.best.balance)}).`);
+  if (y.worst && y.worst !== y.best) noteBits.push(`החודש הכי יקר: ${monthLabel(y.worst.month)} (${y.worst.balance >= 0 ? 'נשארו' : 'חסרו'} ${fmt(Math.abs(y.worst.balance))}).`);
+  if (y.monthsWithData) noteBits.push(`בממוצע יוצאים ${fmt(y.avgExpense)} בחודש.`);
+  view.replaceChildren(h('div', { class: 'fade-in' },
+    pageHead(`סיכום שנת ${year}`, 'כל השנה במבט אחד', h('div', { class: 'month-pick' }, h('button', { class: 'btn icon', type: 'button', 'aria-label': 'שנה קודמת', onclick: () => shift(-1) }, icon('prev', 18)), h('strong', {}, year), h('button', { class: 'btn icon', type: 'button', 'aria-label': 'שנה הבאה', onclick: () => shift(1) }, icon('next', 18)))),
+    h('div', { class: 'grid g4' },
+      h('div', { class: 'card stat' }, h('div', { class: 'label' }, h('span', { class: 'dot', style: { background: 'var(--s3)' } }), 'נכנס השנה'), h('div', { class: 'value num' }, y.income ? fmt(y.income) : '—')),
+      h('div', { class: 'card stat' }, h('div', { class: 'label' }, h('span', { class: 'dot', style: { background: 'var(--exp)' } }), 'יצא השנה'), h('div', { class: 'value num' }, fmt(y.expense))),
+      h('div', { class: 'card stat' }, h('div', { class: 'label' }, 'נשאר'), h('div', { class: 'value num ' + (y.balance >= 0 ? 'pos' : 'neg') }, y.income ? fmt(y.balance) : '—')),
+      h('div', { class: 'card stat' }, h('div', { class: 'label' }, 'אחוז חיסכון'), h('div', { class: 'value num' }, y.savingsRate === null ? '—' : pct(y.savingsRate)), h('div', { class: 'note' }, y.monthsWithData ? `לפי ${y.monthsWithData} חודשים עם נתונים` : 'אין עדיין נתונים'))),
+    h('div', { class: 'grid' }, card('הכנסות והוצאות לפי חודש', noteBits.join(' ') || 'אין עדיין נתונים בשנה הזו', yearChart(y.months))),
+    h('div', { class: 'grid g2' },
+      card('החודשים במספרים', 'מהחדש לישן', active.length ? monthsTable(active) : h('div', { class: 'empty small' }, 'אין נתונים')),
+      card('על מה הלך הכסף השנה?', 'הקטגוריות הגדולות', categoryBars(y.categories.map((c) => ({ ...c, budget: null, pct: null })), { onlyTop: 10, total: y.expense }))))); }
+
+const PAGES = { home: pageHome, recurring: pageRecurring, onetime: pageOneTime, transactions: pageTransactions, budget: pageBudget, year: pageYear, accounts: pageAccounts };
 
 // ---------- אתחול ----------
 (async function init() {

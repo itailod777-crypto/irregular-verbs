@@ -9,6 +9,7 @@ const { listCompanies, getCompany } = require('./companies');
 const { notifyFailure } = require('./notify');
 const { WrongPasswordError } = require('./crypto');
 const recurring = require('./recurring');
+const { alerts } = require('./alerts');
 
 function createApp({ db, vault, port, createScraperImpl }) {
   const app = express();
@@ -236,6 +237,15 @@ function createApp({ db, vault, port, createScraperImpl }) {
   const accQ = (req) => (req.query.accountId ? intId(req.query.accountId) : null);
   app.get('/api/summary', wrap((req, res) => res.json(store.summary(db, String(req.query.month), accQ(req)))));
   app.get('/api/insights', wrap((req, res) => { need(store.MONTH_RE.test(String(req.query.month)), 'חודש לא תקין'); res.json(store.insights(db, req.query.month, accQ(req))); }));
+  app.get('/api/alerts', wrap((req, res) => { need(store.MONTH_RE.test(String(req.query.month)), 'חודש לא תקין'); res.json(alerts(db, req.query.month, accQ(req))); }));
+  app.get('/api/year', wrap((req, res) => res.json(store.yearSummary(db, String(req.query.year), accQ(req)))));
+  app.get('/api/export.csv', wrap((req, res) => {
+    const month = req.query.month ? String(req.query.month) : 'all';
+    const csv = store.exportCsv(db, { month, accountId: accQ(req) });
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="transactions-${month}.csv"`);
+    res.send(csv);
+  }));
   app.put('/api/income', wrap((req, res) => {
     const b = req.body;
     need(store.MONTH_RE.test(String(b.month)), 'חודש לא תקין');
@@ -243,10 +253,10 @@ function createApp({ db, vault, port, createScraperImpl }) {
     res.json({ ok: true });
   }));
   app.get('/api/months', wrap((req, res) => res.json(db.prepare('SELECT DISTINCT substr(date,1,7) m FROM transactions ORDER BY m DESC').all().map((r) => r.m))));
-  const SETTING_KEYS = ['ntfy_topic', 'ntfy_server', 'auto_sync', 'sync_hour', 'initial_months'];
+  const SETTING_KEYS = ['ntfy_topic', 'ntfy_server', 'auto_sync', 'sync_hour', 'initial_months', 'savings_goal'];
   app.get('/api/settings', wrap((req, res) => res.json({
     ntfy_topic: getSetting(db, 'ntfy_topic', ''), ntfy_server: getSetting(db, 'ntfy_server', ''),
-    auto_sync: getSetting(db, 'auto_sync', '1'), sync_hour: getSetting(db, 'sync_hour', '6'), initial_months: getSetting(db, 'initial_months', '6'),
+    auto_sync: getSetting(db, 'auto_sync', '1'), savings_goal: getSetting(db, 'savings_goal', ''), sync_hour: getSetting(db, 'sync_hour', '6'), initial_months: getSetting(db, 'initial_months', '6'),
   })));
   app.put('/api/settings', wrap((req, res) => {
     const b = req.body;
@@ -257,6 +267,7 @@ function createApp({ db, vault, port, createScraperImpl }) {
       if (k === 'ntfy_topic') need(/^[A-Za-z0-9_-]{0,64}$/.test(v), 'נושא ntfy: אותיות לטיניות, ספרות, - ו-_ בלבד');
       if (k === 'sync_hour') need(/^([0-9]|1[0-9]|2[0-3])$/.test(v), 'שעה בין 0 ל-23');
       if (k === 'initial_months') need(/^([1-9]|1[0-2])$/.test(v), 'חודשים בין 1 ל-12');
+      if (k === 'savings_goal') need(v === '' || (Number.isFinite(Number(v)) && Number(v) >= 0), 'יעד חיסכון לא תקין');
       if (k === 'auto_sync') need(v === '0' || v === '1', 'ערך לא תקין');
       setSetting(db, k, v);
     }

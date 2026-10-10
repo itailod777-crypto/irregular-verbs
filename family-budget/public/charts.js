@@ -156,12 +156,12 @@ function splitBar(recurring, oneTime) {
   return h('div', { class: 'splitbar', role: 'img', 'aria-label': `קבועות ${pct(recurring / total)}, חד-פעמיות ${pct(oneTime / total)}` },
     h('i', { style: { flex: `${recurring} 1 0`, background: 'var(--s1)' } }), h('i', { style: { flex: `${oneTime} 1 0`, background: 'var(--s2)' } }));
 }
-function sparkline(values, color = 'var(--s1)') {
-  const W = 84, H = 26, max = Math.max(...values, 1), n = values.length;
-  const pts = values.map((v, i) => [W - 3 - (i * (W - 6)) / (n - 1), H - 3 - (v / max) * (H - 8)]);
+function sparkline(values, color = 'var(--s1)', ring = 'var(--surface)', w = 84, hgt = 26) {
+  const W = w, H = hgt, max = Math.max(...values, 1), n = values.length;
+  const pts = values.map((v, i) => [W - 3 - (i * (W - 6)) / (n - 1), H - 3 - (Math.max(v, 0) / max) * (H - 8)]);
   const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: 'img', 'aria-label': 'מגמה 6 חודשים' });
   svg.append(s('path', { d: pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x},${y}`).join(' '), fill: 'none', stroke: color, 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
-  svg.append(s('circle', { cx: pts[0][0], cy: pts[0][1], r: 3.5, fill: color, stroke: 'var(--surface)', 'stroke-width': 2 }));
+  svg.append(s('circle', { cx: pts[0][0], cy: pts[0][1], r: 3.5, fill: color, stroke: ring, 'stroke-width': 2 }));
   return svg;
 }
 
@@ -179,7 +179,7 @@ function categoryBars(items, { onlyTop = 8, total } = {}) {
       h('div', { class: 'val num' }, fmt(i.total), hasB ? h('span', { class: 'of' }, ` מתוך ${fmt(i.budget)}`) : null),
       h('div', { class: 'track', role: 'progressbar', 'aria-valuenow': Math.round(i.total), 'aria-valuemin': 0, 'aria-valuemax': Math.round(hasB ? i.budget : max), 'aria-label': i.name },
         h('div', { class: 'fill ' + state, style: { width: `${Math.min(100, (i.total / (hasB ? Math.max(i.budget, i.total) : max)) * 100)}%` } })),
-      h('div', { class: 'bar-meta' }, h('span', {}, state === 'crit' ? '⚠ ' + label : label), hasB ? h('span', {}, pct(i.pct)) : h('span', {}, `${i.count} עסקאות`)));
+      h('div', { class: 'bar-meta' }, h('span', {}, state === 'crit' ? '⚠ ' + label : label), hasB ? h('span', {}, pct(i.pct)) : h('span', {}, i.count != null ? `${i.count} עסקאות` : '')));
   }));
 }
 
@@ -192,4 +192,92 @@ function rankBars(items, unitLabel = 'עסקאות') {
     h('div', { class: 'val num' }, fmt(i.total)),
     h('div', { class: 'track' }, h('div', { class: 'fill', style: { width: `${(i.total / max) * 100}%` } })),
     i.count ? h('div', { class: 'bar-meta' }, h('span', {}, `${i.count} ${unitLabel}`)) : null)));
+}
+
+// מפת חום של החודש: כל ריבוע הוא יום, וככל שהצבע כהה יותר יצא יותר כסף באותו יום
+function heatmapCalendar(ins) {
+  const max = Math.max(...ins.daily, 1), names = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
+  const grid = h('div', { class: 'heat', role: 'img', 'aria-label': 'הוצאה לפי יום בחודש' }, names.map((n) => h('div', { class: 'heat-h' }, n)));
+  for (let i = 0; i < ins.firstWeekday; i++) grid.append(h('div', { class: 'heat-cell empty' }));
+  ins.daily.forEach((v, i) => {
+    const day = i + 1, future = ins.todayDay && day > ins.todayDay;
+    const pctv = v > 0 ? Math.round(16 + 84 * Math.sqrt(v / max)) : 0;
+    const cell = h('div', { class: 'heat-cell' + (future ? ' future' : '') + (ins.todayDay === day ? ' today' : ''), title: `${day} בחודש: ${v > 0 ? fmt(v) : 'לא יצא כסף'}`,
+      style: { background: pctv ? `color-mix(in srgb, var(--s1) ${pctv}%, var(--surface-2))` : 'var(--surface-2)', color: pctv > 55 ? '#fff' : 'var(--ink)' } },
+    h('b', {}, day), v > 0 ? h('small', {}, short(v)) : null);
+    grid.append(cell);
+  });
+  return h('div', {}, grid, h('div', { class: 'heat-legend' }, h('span', {}, 'פחות'), h('i', {}), h('span', {}, 'יותר')));
+}
+
+// ממוצע הוצאה לפי יום בשבוע
+function weekdayChart(weekday) {
+  const names = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+  return mountChart((W, box) => {
+    const H = 210, L = 6, R = 6, T = 24, B = 28, iw = W - L - R, ih = H - T - B, max = niceMax(Math.max(...weekday, 1)), slot = iw / 7, bw = Math.min(34, slot * 0.62);
+    const top = weekday.indexOf(Math.max(...weekday)), tip = tooltip(box);
+    const svg = s('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'ממוצע הוצאה לפי יום בשבוע' });
+    svg.append(s('line', { x1: L, x2: W - R, y1: T + ih, y2: T + ih, stroke: 'var(--axis)' }));
+    weekday.forEach((v, i) => {
+      const cx = L + iw - slot * (i + 0.5), hh = (v / max) * ih;
+      if (hh > 0.5) svg.append(s('path', { d: roundTop(cx - bw / 2, T + ih - hh, bw, hh, 5), fill: 'var(--s1)', opacity: i === top ? 1 : 0.55 }));
+      svg.append(s('text', { x: cx, y: H - 9, 'text-anchor': 'middle', class: i === top ? 't-ink' : '' }, W > 420 ? names[i] : names[i].slice(0, 2)));
+      if (i === top && v > 0) svg.append(s('text', { x: cx, y: T + ih - hh - 6, 'text-anchor': 'middle', class: 't-ink' }, short(v)));
+      const hit = s('rect', { x: cx - slot / 2, y: T, width: slot, height: ih + B, fill: 'transparent' });
+      hit.addEventListener('pointerenter', () => tip.show(cx, T, `יום ${names[i]}`, [['var(--s1)', 'ממוצע ליום', fmt(v)]]));
+      hit.addEventListener('pointerleave', () => tip.hide());
+      svg.append(hit);
+    });
+    const frag = document.createDocumentFragment(); frag.append(svg); return frag;
+  });
+}
+
+// 12 חודשים: עמודות הוצאה וקו הכנסה
+function yearChart(months) {
+  const wrap = mountChart((W, box) => {
+    const H = 270, L = 6, R = 44, T = 18, B = 32, iw = W - L - R, ih = H - T - B, max = niceMax(Math.max(...months.map((m) => Math.max(m.income, m.expense)), 1));
+    const y = (v) => T + ih - (v / max) * ih, slot = iw / 12, bw = Math.min(30, slot * 0.62), cx = (i) => L + iw - slot * (i + 0.5), tip = tooltip(box);
+    const svg = s('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'הכנסות והוצאות ב-12 חודשים' });
+    axisY(svg, W, L, R, T, ih, max);
+    const pts = [];
+    months.forEach((m, i) => {
+      const hh = (m.expense / max) * ih;
+      if (hh > 0.5) svg.append(s('path', { d: roundTop(cx(i) - bw / 2, y(0) - hh, bw, hh, 4), fill: 'var(--exp)', opacity: m.hasData ? 1 : 0.3 }));
+      svg.append(s('text', { x: cx(i), y: H - 9, 'text-anchor': 'middle' }, monthShortLabel(m.month)));
+      if (m.income > 0) pts.push([cx(i), y(m.income)]);
+      const hit = s('rect', { x: cx(i) - slot / 2, y: T, width: slot, height: ih + B, fill: 'transparent' });
+      hit.addEventListener('pointerenter', () => tip.show(cx(i), T, monthLabel(m.month), [['var(--s3)', 'נכנס', fmt(m.income)], ['var(--exp)', 'יצא', fmt(m.expense)], [null, 'נשאר', fmt(m.balance)]]));
+      hit.addEventListener('pointerleave', () => tip.hide());
+      svg.append(hit);
+    });
+    if (pts.length) {
+      svg.append(s('path', { d: pts.map(([px, py], i) => `${i ? 'L' : 'M'}${px},${py}`).join(' '), fill: 'none', stroke: 'var(--s3)', 'stroke-width': 2.5, 'stroke-linejoin': 'round' }));
+      pts.forEach(([px, py]) => svg.append(s('circle', { cx: px, cy: py, r: 4.5, fill: 'var(--s3)', stroke: 'var(--surface)', 'stroke-width': 2 })));
+    }
+    const frag = document.createDocumentFragment(); frag.append(svg); return frag;
+  });
+  return h('div', {}, wrap, legend([['var(--s3)', 'נכנס'], ['var(--exp)', 'יצא']]));
+}
+
+// טבלת 6 החודשים במספרים
+function monthsTable(trend) {
+  return h('div', { class: 'table-wrap' }, h('table', { class: 'dense' },
+    h('thead', {}, h('tr', {}, ['חודש', 'נכנס', 'יצא', 'נשאר', 'חיסכון'].map((t, i) => h('th', { class: i ? 'amt' : '' }, t)))),
+    h('tbody', {}, [...trend].reverse().map((t, idx) => {
+      const left = t.income - t.expense, rate = t.income > 0 ? left / t.income : null;
+      return h('tr', { class: idx === 0 ? 'cur-row' : '' }, h('td', { class: 'nowrap', title: monthLabel(t.month) }, `${monthShortLabel(t.month)} ${t.month.slice(2, 4)}`), h('td', { class: 'amt' }, t.income ? fmt(t.income) : '—'), h('td', { class: 'amt' }, fmt(t.expense)),
+        h('td', { class: 'amt ' + (t.income ? (left >= 0 ? 'pos' : 'neg') : '') }, t.income ? fmt(left) : '—'), h('td', { class: 'amt' }, rate === null ? '—' : h('span', { class: 'chip ' + (rate >= 0.1 ? 'good' : rate >= 0 ? 'warn' : 'crit') }, pct(rate))));
+    }))));
+}
+
+// טבלת "מה השתנה" לכל קטגוריה מול החודש הקודם
+function deltaTable(items) {
+  if (!items.length) return h('div', { class: 'empty small' }, 'עדיין אין נתונים להשוואה');
+  return h('div', { class: 'table-wrap' }, h('table', { class: 'dense' },
+    h('thead', {}, h('tr', {}, ['קטגוריה', 'החודש', 'חודש קודם', 'שינוי'].map((t, i) => h('th', { class: i ? 'amt' : '' }, t)))),
+    h('tbody', {}, items.map((c) => {
+      const up = c.delta > 0.5, down = c.delta < -0.5;
+      return h('tr', {}, h('td', {}, h('span', { class: 'chip' }, h('span', { class: 'dot', style: { background: c.color } }), c.name)), h('td', { class: 'amt' }, fmt(c.cur)), h('td', { class: 'amt muted' }, c.prev ? fmt(c.prev) : '—'),
+        h('td', { class: 'amt ' + (up ? 'neg' : down ? 'pos' : '') }, up ? `▲ ${fmt(c.delta)}` : down ? `▼ ${fmt(-c.delta)}` : '='));
+    }))));
 }
