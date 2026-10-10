@@ -35,3 +35,16 @@ test('הכניסה המתוקנת של ישראכרט נטענת', () => {
   const { PatchedIsracardScraper } = require('../src/isracard-login');
   assert.equal(typeof new PatchedIsracardScraper({ companyId: 'isracard', startDate: new Date() }).login, 'function');
 });
+
+test('הקלדה בשדה שמרנדר את עצמו אחרי התו הראשון עדיין ממלאת את כל הערך', async (t) => {
+  const exe = findBrowser();
+  if (!exe) return t.skip('אין דפדפן במחשב');
+  const puppeteer = require('puppeteer');
+  const browser = await puppeteer.launch({ executablePath: exe, headless: true, args: ['--no-sandbox'] });
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  await page.setContent(`<input id="c" data-fb="card" type="text"><script>let n=0;c.addEventListener('input',()=>{ if(n++===0){ const v=c.value; const f=c.cloneNode(); f.value=v; c.replaceWith(f); f.id='c'; } });</script>`);
+  const { typeInto } = require('../src/isracard-login');
+  assert.equal(await typeInto(page, '[data-fb="card"]', '123456'), true);
+  assert.equal(await page.$eval('[data-fb="card"]', (e) => e.value), '123456');
+});

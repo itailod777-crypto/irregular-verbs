@@ -47,10 +47,28 @@ async function tagLoginFields(page) {
   });
 }
 
+const readValue = (page, sel) => page.$eval(sel, (e) => e.value).catch(() => '');
+
+// הקלדה עם אימות: הדף של ישראכרט מרנדר שדות מחדש תוך כדי הקלדה, ולפעמים נכנס רק התו הראשון.
+// מנסים להקליד, בודקים שכל הערך נכנס, ואם לא: מנסים שוב ובסוף מציבים את הערך ישירות ומודיעים לדף.
 async function typeInto(page, sel, value) {
-  await page.click(sel, { clickCount: 3 });
-  await page.keyboard.press('Backspace');
-  await page.type(sel, String(value), { delay: 40 });
+  const want = String(value);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await page.click(sel, { clickCount: 3 });
+    await page.keyboard.press('Backspace');
+    for (const ch of want) {
+      if (!(await page.$(sel))) break;
+      await page.type(sel, ch, { delay: 30 });
+      await new Promise((r) => setTimeout(r, 60));
+    }
+    if ((await readValue(page, sel)) === want) return true;
+  }
+  await page.$eval(sel, (el, v) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+    setter.call(el, v);
+    el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); el.dispatchEvent(new Event('blur', { bubbles: true }));
+  }, want);
+  return (await readValue(page, sel)) === want;
 }
 
 class PatchedIsracardScraper extends IsracardScraper {
@@ -62,9 +80,10 @@ class PatchedIsracardScraper extends IsracardScraper {
     await page.waitForSelector('input[type=password]', { visible: true, timeout: 30000 });
     const r = await tagLoginFields(page);
     if (!r.ok) throw new Error(`Isracard login form not recognized (${r.reason})`);
-    await typeInto(page, '[data-fb="id"]', credentials.id);
-    await typeInto(page, '[data-fb="card"]', credentials.card6Digits);
-    await typeInto(page, '[data-fb="pass"]', credentials.password);
+    if (!/^\d{6}$/.test(String(credentials.card6Digits || ''))) throw new Error('Isracard: card6Digits must be exactly 6 digits (check the saved details)');
+    for (const [sel, v] of [['id', credentials.id], ['card', credentials.card6Digits], ['pass', credentials.password]]) {
+      if (!(await typeInto(page, `[data-fb="${sel}"]`, v))) throw new Error(`Isracard: could not fill field "${sel}"`);
+    }
     await page.click('[data-fb="submit"]');
     await page.waitForFunction((src) => !/personalarea\/Login/i.test(location.href) || new RegExp(src).test(document.body.innerText), { timeout: 45000 }, ERROR_RE.source).catch(() => {});
     if (!/personalarea\/Login/i.test(page.url())) return { success: true };
@@ -73,4 +92,4 @@ class PatchedIsracardScraper extends IsracardScraper {
   }
 }
 
-module.exports = { PatchedIsracardScraper, openPasswordMode, tagLoginFields };
+module.exports = { PatchedIsracardScraper, openPasswordMode, tagLoginFields, typeInto };
