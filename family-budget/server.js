@@ -6,6 +6,9 @@ const { findMasterPassword } = require('./src/masterpw');
 const { createApp } = require('./src/app');
 const { runSync } = require('./src/sync');
 const { createLan } = require('./src/lan');
+const { createUpdater } = require('./src/updater');
+const { spawn } = require('child_process');
+const path = require('path');
 
 const db = openDb(DB_FILE);
 const vault = new Vault(VAULT_FILE);
@@ -20,7 +23,17 @@ if (vault.exists()) {
 
 let app;
 const lan = { get: () => realLan.get(), set: (on) => realLan.set(on) };
-app = createApp({ db, vault, port: PORT, lan });
+// הפעלה מחדש אחרי עדכון: באפליקציית שולחן העבודה (Electron) דרך Electron, אחרת מפעילים תהליך חדש אחרי שהישן נסגר
+const restart = () => {
+  if (process.versions.electron) { const { app: ea } = require('electron'); ea.relaunch(); ea.exit(0); return; }
+  const dir = __dirname;
+  const child = process.platform === 'win32'
+    ? spawn('cmd.exe', ['/c', `ping -n 4 127.0.0.1 >nul & wscript "${path.join(dir, 'app.vbs')}" hidden`], { cwd: dir, detached: true, stdio: 'ignore', windowsHide: true })
+    : spawn('sh', ['-c', `sleep 3; exec node "${path.join(dir, 'server.js')}"`], { cwd: dir, detached: true, stdio: 'ignore' });
+  child.unref();
+  process.exit(0);
+};
+app = createApp({ db, vault, port: PORT, lan, updater: createUpdater({ restart }) });
 const realLan = createLan({ app, port: PORT, onChange: (on) => setSetting(db, 'lan_enabled', on ? '1' : '0') });
 const server = app.listen(PORT, HOST, () => {
   console.log(`Family Budget פועל על http://${HOST}:${PORT} (מקומי בלבד)`);

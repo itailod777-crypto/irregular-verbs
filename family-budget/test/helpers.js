@@ -11,12 +11,12 @@ const { createApp } = require('../src/app');
 function freePort() {
   return new Promise((resolve) => { const s = net.createServer().listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => resolve(p)); }); });
 }
-async function startApp({ createScraperImpl } = {}) {
+async function startApp({ createScraperImpl, updater } = {}) {
   const dir = fs.mkdtempSync(path.join(process.env.BUDGET_DATA_DIR, 'case-'));
   const db = openDb(path.join(dir, 'b.db'));
   const vault = new Vault(path.join(dir, 'vault.json'));
   const port = await freePort();
-  const app = createApp({ db, vault, port, createScraperImpl });
+  const app = createApp({ db, vault, port, createScraperImpl, updater });
   const server = await new Promise((r) => { const s = app.listen(port, '127.0.0.1', () => r(s)); });
   const base = `http://127.0.0.1:${port}`;
   const client = () => {

@@ -12,11 +12,12 @@ const recurring = require('./recurring');
 const { alerts } = require('./alerts');
 const { Auth, isPrivateIp } = require('./auth');
 
-function createApp({ db, vault, port, createScraperImpl, lan }) {
+function createApp({ db, vault, port, createScraperImpl, lan, updater }) {
   const app = express();
   app.disable('x-powered-by');
   const state = { syncing: false, unlockFails: 0, lockedUntil: 0 };
   const auth = new Auth(db);
+  updater = updater || { info: async () => ({ hasGit: false }), check: async () => ({ hasGit: false }), apply: async () => { throw new Error('עדכון אינו זמין'); } };
   lan = lan || { _on: false, get() { return { enabled: this._on, addresses: [], port }; }, async set(on) { this._on = !!on; } };
   // Host מותר רק אם הוא localhost או כתובת IP פרטית (כתובת מספרית לא ניתנת ל-DNS rebinding) ובפורט הנכון
   const hostOk = (hostHeader) => {
@@ -90,6 +91,18 @@ function createApp({ db, vault, port, createScraperImpl, lan }) {
     need(auth.usersExist(), 'קודם צריך ליצור משתמשים עם סיסמה');
     await lan.set(!!req.body.enabled);
     res.json(lan.get());
+  }));
+
+  // ---- גרסה ועדכון (מנהל בלבד) ----
+  app.get('/api/version', wrap(async (req, res) => { admin(req); res.json(await updater.info()); }));
+  app.post('/api/version/check', wrap(async (req, res) => {
+    admin(req);
+    try { res.json(await updater.check()); } catch (e) { throw new Error('לא הצלחנו לבדוק עדכון. ודאו שיש חיבור לאינטרנט. ' + e.message.slice(0, 160)); }
+  }));
+  app.post('/api/update', wrap(async (req, res) => {
+    admin(req);
+    need(!state.syncing, 'עדכון עסקאות רץ כרגע. נסו שוב בעוד כמה דקות.');
+    try { res.json(await updater.apply()); } catch (e) { throw new Error('העדכון נכשל: ' + e.message.slice(0, 220)); }
   }));
 
   // ---- סטטוס וכספת ----

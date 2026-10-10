@@ -542,6 +542,7 @@ async function pageAccounts(view) {
   }
   if (isAdmin()) frag.append(h('div', { class: 'grid' }, addCardForm(st, companies)));
   frag.append(h('div', { class: 'grid' }, importCard()));
+  if (isAdmin()) frag.append(h('div', { class: 'grid' }, updateCard()));
   // יומן והגדרות מתקדמות
   const topic = h('input', { value: settings.ntfy_topic, placeholder: 'למשל: budget-x7k29q', dir: 'ltr' });
   const server = h('input', { value: settings.ntfy_server, placeholder: 'https://ntfy.sh', dir: 'ltr' });
@@ -673,6 +674,30 @@ function resetPwDialog(u) {
     });
 }
 
+
+// ---------- גרסה ועדכון מתוך האפליקציה ----------
+function updateCard() {
+  const body = h('div', { class: 'stack-gap' }, h('p', { class: 'sub' }, 'טוען...'));
+  api('GET', '/api/version').then((v) => {
+    if (!v.hasGit) { body.replaceChildren(h('p', {}, 'האפליקציה הותקנה בלי Git, ולכן אי אפשר לעדכן מכאן. אפשר להתקין מחדש עם setup-from-git.bat.')); return; }
+    const result = h('div', {}), check = h('button', { class: 'btn', type: 'button' }, 'בדיקת עדכון');
+    check.addEventListener('click', busy(check, async () => {
+      const r = await api('POST', '/api/version/check');
+      if (!r.behind) { result.replaceChildren(h('span', { class: 'chip good' }, '✓ יש לכם את הגרסה העדכנית ביותר')); return; }
+      const go = h('button', { class: 'btn primary', type: 'button' }, 'עדכון עכשיו');
+      go.addEventListener('click', busy(go, async () => {
+        await api('POST', '/api/update');
+        document.body.append(h('div', { class: 'update-overlay', role: 'status' }, h('div', { class: 'card' }, h('span', { class: 'spinner' }), h('h2', {}, 'מעדכן את האפליקציה...'), h('p', {}, 'האפליקציה תיסגר ותיפתח מחדש בעצמה. זה לוקח בערך דקה. אל תסגרו את החלון.'))));
+        await new Promise((res) => setTimeout(res, 6000));
+        for (let i = 0; i < 90; i++) { const up = await fetch('/api/auth/state').then((x) => x.ok, () => false); if (up) { location.reload(); return; } await new Promise((res) => setTimeout(res, 2000)); }
+        location.reload();
+      }));
+      result.replaceChildren(h('div', { class: 'banner info' }, h('div', { class: 'grow' }, h('strong', {}, 'יש עדכון חדש'), r.message || ''), go));
+    }));
+    body.replaceChildren(h('p', {}, 'הגרסה שלכם: ', h('code', {}, v.current)), h('div', { class: 'actions' }, check), result);
+  }).catch((e) => body.replaceChildren(h('p', { class: 'hint' }, e.message)));
+  return card('גרסה ועדכונים', 'כשיש תיקון או שיפור, מעדכנים כאן בלחיצה אחת, בלי לחפש קבצים.', body);
+}
 
 const PAGES = { home: pageHome, recurring: pageRecurring, onetime: pageOneTime, transactions: pageTransactions, budget: pageBudget, year: pageYear, family: pageFamily, accounts: pageAccounts };
 
