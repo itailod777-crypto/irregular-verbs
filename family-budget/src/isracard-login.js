@@ -107,13 +107,13 @@ class PatchedIsracardScraper extends IsracardScraper {
         if (!r.ok) throw new Error(`Isracard login form lost (${r.reason})`);
         if ((await readValue(page, `[data-fb="${sel}"]`)) !== String(v)) {
           stable = false;
-          if (!(await typeInto(page, `[data-fb="${sel}"]`, v))) throw new Error(`Isracard: could not fill field "${sel}"`);
+          if (!(await typeInto(page, `[data-fb="${sel}"]`, v))) throw new Error(`Isracard: could not fill field "${sel}" ${JSON.stringify(await formReport(page))}`);
           await settle();
         }
       }
     }
     await tagLoginFields(page);
-    for (const [sel, v] of wanted) if ((await readValue(page, `[data-fb="${sel}"]`)) !== String(v)) throw new Error(`Isracard: field "${sel}" did not keep its value`);
+    for (const [sel, v] of wanted) if ((await readValue(page, `[data-fb="${sel}"]`)) !== String(v)) throw new Error(`Isracard: field "${sel}" did not keep its value ${JSON.stringify(await formReport(page))}`);
     const before = await formReport(page);
     if (before.errors && before.errors.length) { // הדף מציג שגיאת אימות: לא שולחים, מנסים להקליד שוב לאט
       for (const [sel, v] of wanted) { await typeInto(page, `[data-fb="${sel}"]`, v); await settle(); }
