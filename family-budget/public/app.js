@@ -95,7 +95,8 @@ async function refreshStatus() {
   if (st.failing.length) {
     box.append(h('div', { class: 'banner crit', role: 'alert' }, h('span', { 'aria-hidden': 'true', class: 'warn-ic' }, '⚠'),
       h('div', { class: 'grow' }, h('strong', {}, st.failing.length === 1 ? 'העדכון נכשל עבור כרטיס אחד' : `העדכון נכשל עבור ${st.failing.length} כרטיסים`),
-        st.failing.map((f) => h('div', {}, h('b', {}, f.label), ': ', friendlyError(f.last_status)))),
+        st.failing.map((f) => h('div', { class: 'fail-item' }, h('b', {}, f.label), ': ', friendlyError(f.last_status),
+          h('details', { class: 'tech' }, h('summary', {}, 'פרטים טכניים (אפשר לצלם ולשלוח ל-Claude)'), h('pre', { dir: 'ltr' }, f.last_status))))),
       h('a', { class: 'btn sm', href: '#/accounts' }, 'מה עושים?')));
   }
   const sb = document.getElementById('sync-btn');
