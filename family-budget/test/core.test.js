@@ -348,3 +348,20 @@ test('מציאת דפדפן לסריקה: סביבה, מצורף, ואז Chrome/
   assert.equal(findBrowser({ env, exists: only(edge), bundled: '/missing' }), edge, 'Edge הוא תמיד ב-Windows');
   assert.equal(findBrowser({ env, exists: () => false, bundled: '/missing' }), null);
 });
+
+test('יבוא אקסל בסגנון מקס: כמה גיליונות, תאריך חיוב וסכום חיוב, החזרים', async () => {
+  const ExcelJS = require('exceljs');
+  const wb = new ExcelJS.Workbook();
+  const H = ['תאריך עסקה', 'שם בית העסק', 'קטגוריה', '4 ספרות אחרונות של כרטיס האשראי', 'סוג עסקה', 'סכום חיוב', 'מטבע חיוב', 'סכום עסקה מקורי', 'מטבע עסקה מקורי', 'תאריך חיוב', 'הערות'];
+  const a = wb.addWorksheet('עסקאות במועד החיוב'); a.addRow(['פירוט עסקאות']); a.addRow(H);
+  a.addRow(['03/09/2026', 'שופרסל דיל', 'מזון', '1234', 'רגילה', 250.5, 'ש"ח', 250.5, 'ש"ח', '10/10/2026', '']);
+  a.addRow(['04/09/2026', 'זיכוי פז', 'דלק', '1234', 'רגילה', -50, 'ש"ח', -50, 'ש"ח', '10/10/2026', '']);
+  const b = wb.addWorksheet('עסקאות שאושרו וממתינות לחיוב'); b.addRow(H);
+  b.addRow(['20/09/2026', 'נטפליקס', 'מנויים', '1234', 'רגילה', 49.9, 'ש"ח', 49.9, 'ש"ח', '10/11/2026', '']);
+  wb.addWorksheet('גיליון ריק'); // גיליון בלי נתונים לא מפיל את היבוא
+  const r = await parseFile(Buffer.from(await wb.xlsx.writeBuffer()), 'max.xlsx');
+  assert.equal(r.rows.length, 3, 'שני הגיליונות נקראו');
+  assert.equal(r.signMode, 'expenses-positive');
+  assert.deepEqual(r.rows.map((x) => [x.description, x.amount]), [['שופרסל דיל', -250.5], ['זיכוי פז', 50], ['נטפליקס', -49.9]]);
+  assert.equal(r.columns.charge, 'סכום חיוב');
+});

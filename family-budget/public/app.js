@@ -58,7 +58,8 @@ const catOptions = (sel, kinds = ['expense', 'income', 'transfer']) =>
 const field = (label, input, hint) => h('label', { class: 'field' }, label, input, hint ? h('span', { class: 'hint' }, hint) : null);
 
 // הסבר פשוט בעברית במקום שגיאה טכנית (הטקסט המקורי נשאר ביומן העדכונים)
-function friendlyError(m = '') {
+function friendlyError(m = '', company = '') {
+  if (company === 'max' && /TIMEOUT|GENERIC|timed? ?out|Navigation|waiting for|selector|not found/i.test(m) && !/INVALID_PASSWORD|CHANGE_PASSWORD/.test(m)) return 'מקס שינה את דף הכניסה שלו, והכניסה האוטומטית לא עובדת כרגע. אפשר להעלות קובץ עסקאות (עמוד כרטיסים וחשבונות ← "העלאת קובץ"), וזה עובד מצוין.';
   if (/INVALID_PASSWORD/.test(m)) return 'שם המשתמש או הסיסמה לא נכונים. לחצו על "עדכון סיסמה" בכרטיס.';
   if (/CHANGE_PASSWORD/.test(m)) return 'האתר מבקש להחליף סיסמה. היכנסו לאתר, החליפו סיסמה, ואז עדכנו אותה כאן.';
   if (/ACCOUNT_BLOCKED/.test(m)) return 'החשבון ננעל. צריך לפנות לחברה כדי לשחרר אותו.';
@@ -95,7 +96,7 @@ async function refreshStatus() {
   if (st.failing.length) {
     box.append(h('div', { class: 'banner crit', role: 'alert' }, h('span', { 'aria-hidden': 'true', class: 'warn-ic' }, '⚠'),
       h('div', { class: 'grow' }, h('strong', {}, st.failing.length === 1 ? 'העדכון נכשל עבור כרטיס אחד' : `העדכון נכשל עבור ${st.failing.length} כרטיסים`),
-        st.failing.map((f) => h('div', { class: 'fail-item' }, h('b', {}, f.label), ': ', friendlyError(f.last_status),
+        st.failing.map((f) => h('div', { class: 'fail-item' }, h('b', {}, f.label), ': ', friendlyError(f.last_status, f.company),
           h('details', { class: 'tech' }, h('summary', {}, 'פרטים טכניים (אפשר לצלם ולשלוח ל-Claude)'), h('pre', { dir: 'ltr' }, f.last_status))))),
       h('a', { class: 'btn sm', href: '#/accounts' }, 'מה עושים?')));
   }
@@ -525,7 +526,7 @@ function importCard() {
       p.sample.length ? h('p', { class: 'hint' }, 'אם התאריכים והסכומים נראים נכון, אפשר להוסיף. עסקאות שכבר קיימות לא יוכפלו.') : null,
       h('div', { class: 'actions' }, commit)));
   }));
-  return card('אין חיבור אוטומטי? אפשר להעלות קובץ', 'הורידו מאתר הכרטיס או הבנק קובץ אקסל או CSV של העסקאות, והעלו אותו כאן.',
+  return card('אין חיבור אוטומטי? אפשר להעלות קובץ', 'הורידו מאתר הכרטיס או הבנק קובץ אקסל או CSV של העסקאות, והעלו אותו כאן. הקובץ יכול לכלול כמה גיליונות, וכולם נקראים.',
     h('div', { class: 'form-grid' }, field('הקובץ', file), field('לאיזה כרטיס הוא שייך?', target)),
     h('details', {}, h('summary', {}, 'אפשרויות מתקדמות'), field('איך מופיעות ההוצאות בקובץ?', sign)), h('div', { class: 'actions' }, go), out);
 }
@@ -541,7 +542,7 @@ async function pageAccounts(view) {
         const bad = a.last_status && a.last_status !== 'ok';
         return h('div', { class: 'acct-card' },
           h('div', { class: 'acct-top' }, icon('bank', 22), h('div', {}, h('div', { class: 'acct-name' }, a.label), h('div', { class: 'acct-co' }, compName(a.company)))),
-          bad ? h('span', { class: 'chip crit', title: a.last_status.slice(0, 200) }, '✘ ' + friendlyError(a.last_status)) : a.last_sync ? h('span', { class: 'chip good' }, '✓ מעודכן') : h('span', { class: 'chip' }, 'עוד לא עודכן'),
+          bad ? h('span', { class: 'chip crit', title: a.last_status.slice(0, 200) }, '✘ ' + friendlyError(a.last_status, a.company)) : a.last_sync ? h('span', { class: 'chip good' }, '✓ מעודכן') : h('span', { class: 'chip' }, 'עוד לא עודכן'),
           h('div', { class: 'acct-when' }, a.last_sync ? `עדכון אחרון: ${new Date(a.last_sync).toLocaleString('he-IL')}` : ''),
           h('div', { class: 'acct-actions' },
             h('button', { class: 'btn sm primary', type: 'button', onclick: () => doSync(a.id) }, 'עדכן עכשיו'),

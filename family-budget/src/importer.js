@@ -6,8 +6,8 @@ const SYN = {
   date: ['תאריך עסקה', 'תאריך העסקה', 'תאריך רכישה', 'תאריך', 'date', 'transaction date'],
   charge: ['סכום חיוב', 'סכום החיוב', 'סכום בשח', 'חיוב בשח', 'סכום בש"ח', 'amount'],
   amount: ['סכום עסקה', 'סכום העסקה', 'סכום מקורי', 'סכום', 'תנועה'],
-  debit: ['חובה', 'חיוב', 'משיכה', 'debit'],
-  credit: ['זכות', 'זיכוי', 'הפקדה', 'credit'],
+  debit: ['חובה', 'משיכה', 'debit'],
+  credit: ['זכות', 'הפקדה', 'credit'],
   description: ['שם בית עסק', 'שם בית העסק', 'שם העסק', 'בית עסק', 'תיאור', 'תאור', 'תיאור התנועה', 'פרטים', 'תאור העסקה', 'description', 'merchant'],
   memo: ['הערות', 'פירוט נוסף', 'הערה', 'אסמכתא', 'memo'],
 };
@@ -45,19 +45,22 @@ function parseCsv(text) {
 async function parseXlsx(buf) {
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(buf);
-  const ws = wb.worksheets.find((w) => w.rowCount > 0);
-  if (!ws) return [];
-  const rows = [];
-  ws.eachRow({ includeEmpty: false }, (r) => {
-    const vals = [];
-    for (let c = 1; c <= ws.columnCount; c++) {
-      let v = r.getCell(c).value;
-      if (v && typeof v === 'object' && !(v instanceof Date)) v = v.result ?? v.text ?? (v.richText ? v.richText.map((x) => x.text).join('') : '');
-      vals.push(v ?? '');
-    }
-    rows.push(vals);
-  });
-  return rows;
+  const sheets = [];
+  for (const ws of wb.worksheets) {
+    if (!ws.rowCount) continue;
+    const rows = [];
+    ws.eachRow({ includeEmpty: false }, (r) => {
+      const vals = [];
+      for (let c = 1; c <= ws.columnCount; c++) {
+        let v = r.getCell(c).value;
+        if (v && typeof v === 'object' && !(v instanceof Date)) v = v.result ?? v.text ?? (v.richText ? v.richText.map((x) => x.text).join('') : '');
+        vals.push(v ?? '');
+      }
+      rows.push(vals);
+    });
+    sheets.push(rows);
+  }
+  return sheets; // כל הגיליונות (למשל מקס מייצא כמה גיליונות: חיובים, ממתינות, חו"ל)
 }
 
 function detectColumns(rows) {
@@ -119,26 +122,30 @@ async function parseFile(buffer, filename, { sign = 'auto' } = {}) {
     if (!head.includes('<html') && !head.includes('<table')) throw new Error('קובץ xls ישן אינו נתמך. פתח באקסל ושמור כ-xlsx או CSV.');
     throw new Error('קובץ xls מסוג HTML אינו נתמך. פתח באקסל ושמור כ-xlsx או CSV.');
   }
-  const rows = isXlsx ? await parseXlsx(buffer) : parseCsv(decodeBuffer(buffer));
-  const det = detectColumns(rows);
-  if (!det) throw new Error('לא זוהו עמודות תאריך / תיאור / סכום. ודא שיש שורת כותרות בעברית (למשל: תאריך עסקה, שם בית עסק, סכום חיוב).');
-  const { map } = det;
-  const amountCol = map.charge ?? map.amount;
+  const sheets = isXlsx ? await parseXlsx(buffer) : [parseCsv(decodeBuffer(buffer))];
   const parsed = [];
-  let invalid = 0;
-  for (const r of rows.slice(det.headerRow + 1)) {
-    const date = toIsoDate(r[map.date]);
-    const description = String(r[map.description] ?? '').trim();
-    let amount = null;
-    if (map.debit !== undefined || map.credit !== undefined) {
-      const d = map.debit !== undefined ? toNumber(r[map.debit]) : null;
-      const c = map.credit !== undefined ? toNumber(r[map.credit]) : null;
-      if (d || c) amount = (c || 0) - (d || 0);
-      else if (amountCol !== undefined) amount = toNumber(r[amountCol]);
-    } else amount = toNumber(r[amountCol]);
-    if (!date || !description || amount === null || amount === 0) { if (r.some((x) => String(x ?? '').trim())) invalid++; continue; }
-    parsed.push({ date, description, amount, memo: map.memo !== undefined ? String(r[map.memo] ?? '').trim() || null : null, _dc: map.debit !== undefined || map.credit !== undefined });
+  let invalid = 0, usedMap = null, headerNames = [];
+  for (const rows of sheets) {
+    const det = detectColumns(rows);
+    if (!det) continue; // גיליון בלי כותרות מוכרות (כותרת כללית וכד')
+    const { map } = det;
+    const amountCol = map.charge ?? map.amount;
+    for (const r of rows.slice(det.headerRow + 1)) {
+      const date = toIsoDate(r[map.date]);
+      const description = String(r[map.description] ?? '').trim();
+      let amount = null;
+      if (map.debit !== undefined || map.credit !== undefined) {
+        const d = map.debit !== undefined ? toNumber(r[map.debit]) : null;
+        const c = map.credit !== undefined ? toNumber(r[map.credit]) : null;
+        if (d || c) amount = (c || 0) - (d || 0);
+        else if (amountCol !== undefined) amount = toNumber(r[amountCol]);
+      } else amount = toNumber(r[amountCol]);
+      if (!date || !description || amount === null || amount === 0) { if (r.some((x) => String(x ?? '').trim())) invalid++; continue; }
+      parsed.push({ date, description, amount, memo: map.memo !== undefined ? String(r[map.memo] ?? '').trim() || null : null, _dc: map.debit !== undefined || map.credit !== undefined });
+    }
+    if (!usedMap) { usedMap = map; headerNames = rows[det.headerRow].map((c) => String(c ?? '').trim()); }
   }
+  if (!usedMap) throw new Error('לא זוהו עמודות תאריך / תיאור / סכום. ודא שיש שורת כותרות בעברית (למשל: תאריך עסקה, שם בית עסק, סכום חיוב).');
   const dualCol = parsed.length && parsed[0]._dc;
   let mode = sign;
   if (mode === 'auto') {
@@ -146,10 +153,9 @@ async function parseFile(buffer, filename, { sign = 'auto' } = {}) {
     else { const neg = parsed.filter((p) => p.amount < 0).length; mode = parsed.length && neg / parsed.length > 0.5 ? 'expenses-negative' : 'expenses-positive'; }
   }
   for (const p of parsed) { if (mode === 'expenses-positive') p.amount = -p.amount; delete p._dc; }
-  const headerNames = rows[det.headerRow].map((c) => String(c ?? '').trim());
   return {
     rows: parsed, invalid, signMode: mode,
-    columns: Object.fromEntries(Object.entries(map).map(([k, i]) => [k, headerNames[i]])),
+    columns: Object.fromEntries(Object.entries(usedMap).map(([k, i]) => [k, headerNames[i]])),
   };
 }
 
