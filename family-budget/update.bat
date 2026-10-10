@@ -23,6 +23,7 @@ cd /d "%~dp0"
     exit /b 1
   )
   call npm install
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\install-shortcuts.ps1" >nul 2>nul
   wscript "%~dp0app.vbs" hidden
   echo.
   echo Updated. Your data was not touched. Open the Family Budget icon.
