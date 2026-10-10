@@ -87,6 +87,15 @@ async function formReport(page) {
   }).catch(() => ({}));
 }
 
+// הקלדה אמיתית של מקשים אחרי focus ישיר על השדה (בלי קליק שעלול ליפול על שכבה אחרת), ו-Tab בסוף כדי שהדף יאמת את השדה
+async function typeKeys(page, sel, value) {
+  await page.evaluate((q) => { const e = document.querySelector(q); e.focus(); e.select(); }, sel);
+  await page.keyboard.press('Backspace');
+  await page.keyboard.type(String(value), { delay: 90 });
+  await page.keyboard.press('Tab');
+  await new Promise((r) => setTimeout(r, 400));
+}
+
 class PatchedIsracardScraper extends IsracardScraper {
   async login(credentials) {
     const page = this.page;
@@ -114,10 +123,15 @@ class PatchedIsracardScraper extends IsracardScraper {
     }
     await tagLoginFields(page);
     for (const [sel, v] of wanted) if ((await readValue(page, `[data-fb="${sel}"]`)) !== String(v)) throw new Error(`Isracard: field "${sel}" did not keep its value ${JSON.stringify(await formReport(page))}`);
-    const before = await formReport(page);
-    if (before.errors && before.errors.length) { // הדף מציג שגיאת אימות: לא שולחים, מנסים להקליד שוב לאט
-      for (const [sel, v] of wanted) { await typeInto(page, `[data-fb="${sel}"]`, v); await settle(); }
+    // הדף מציג שגיאת אימות גם כשהערך נמצא בשדה (הוא לא "הרגיש" בו). לא שולחים עד שהשגיאה נעלמת, כדי לא לבזבז ניסיון כניסה.
+    let before = await formReport(page);
+    for (let i = 0; i < 3 && before.errors && before.errors.length; i++) {
+      for (const [sel, v] of (i === 0 ? wanted.filter((w) => w[0] === 'pass') : wanted)) { await tagLoginFields(page); await typeKeys(page, `[data-fb="${sel}"]`, v); }
+      await settle();
+      await tagLoginFields(page);
+      before = await formReport(page);
     }
+    if (before.errors && before.errors.length) throw new Error(`Isracard: the page keeps showing a validation error, not submitting ${JSON.stringify(before)}`);
     this.lastReport = before;
     await page.click('[data-fb="submit"]');
     await page.waitForFunction((src) => !/personalarea\/Login/i.test(location.href) || new RegExp(src).test(document.body.innerText), { timeout: 45000 }, ERROR_RE.source).catch(() => {});
