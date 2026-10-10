@@ -106,9 +106,10 @@ class PatchedIsracardScraper extends IsracardScraper {
     const r = await tagLoginFields(page);
     if (!r.ok) throw new Error(`Isracard login form not recognized (${r.reason})`);
     if (!/^\d{6}$/.test(String(credentials.card6Digits || ''))) throw new Error('Isracard: card6Digits must be exactly 6 digits (check the saved details)');
-    const wanted = [['id', credentials.id], ['card', credentials.card6Digits], ['pass', credentials.password]];
+    const wanted = [['id', credentials.id], ['card', credentials.card6Digits]];
     const settle = async () => { await page.waitForNetworkIdle({ idleTime: 1000, timeout: 8000 }).catch(() => {}); await new Promise((r) => setTimeout(r, 1200)); };
-    // הדף מאמת ת.ז.+כרטיס מול השרת ומרנדר מחדש את הטופס (ומרוקן את הסיסמה): ממלאים, ממתינים, ובודקים שהכל עדיין שם
+    // ת.ז. וכרטיס קודם (הדף מאמת אותם מול השרת ומרנדר מחדש), והסיסמה אחרונה וישר "כניסה":
+    // הדף של ישראכרט מאשר בסיסמה רק אותיות באנגלית וספרות, וסיסמה עם סימן כמו _ מסומנת אצלם כשגויה ברגע שהשדה מאבד פוקוס (והכפתור נחסם), למרות שהשרת מקבל אותה.
     for (let round = 0, stable = false; round < 4 && !stable; round++) {
       stable = true;
       for (const [sel, v] of wanted) {
@@ -122,17 +123,14 @@ class PatchedIsracardScraper extends IsracardScraper {
       }
     }
     await tagLoginFields(page);
-    for (const [sel, v] of wanted) if ((await readValue(page, `[data-fb="${sel}"]`)) !== String(v)) throw new Error(`Isracard: field "${sel}" did not keep its value ${JSON.stringify(await formReport(page))}`);
-    // הדף מציג שגיאת אימות גם כשהערך נמצא בשדה (הוא לא "הרגיש" בו). לא שולחים עד שהשגיאה נעלמת, כדי לא לבזבז ניסיון כניסה.
-    let before = await formReport(page);
-    for (let i = 0; i < 3 && before.errors && before.errors.length; i++) {
-      for (const [sel, v] of (i === 0 ? wanted.filter((w) => w[0] === 'pass') : wanted)) { await tagLoginFields(page); await typeKeys(page, `[data-fb="${sel}"]`, v); }
-      await settle();
-      await tagLoginFields(page);
-      before = await formReport(page);
-    }
-    if (before.errors && before.errors.length) throw new Error(`Isracard: the page keeps showing a validation error, not submitting ${JSON.stringify(before)}`);
+    await typeInto(page, '[data-fb="pass"]', credentials.password);
+    if ((await readValue(page, '[data-fb="pass"]')) !== String(credentials.password)) throw new Error(`Isracard: password field did not keep its value ${JSON.stringify(await formReport(page))}`);
+    const before = await formReport(page);
+    await page.$eval('[data-fb="submit"]', (b) => { b.removeAttribute('disabled'); b.removeAttribute('aria-disabled'); b.classList.remove('disabled'); });
     this.lastReport = before;
+    const seen = [];
+    page.on('response', (res) => { try { const u = new URL(res.url()); if (/isracard/i.test(u.host) && /logon|login|valid|otp|captcha/i.test(u.pathname + u.search)) seen.push(`${res.status()} ${u.pathname}${(u.search.match(/reqName=\w+/) || [''])[0] ? '?' + u.search.match(/reqName=\w+/)[0] : ''}`); } catch {} });
+    this.seen = seen;
     await page.click('[data-fb="submit"]');
     await page.waitForFunction((src) => !/personalarea\/Login/i.test(location.href) || new RegExp(src).test(document.body.innerText), { timeout: 45000 }, ERROR_RE.source).catch(() => {});
     if (!/personalarea\/Login/i.test(page.url())) {
@@ -144,7 +142,7 @@ class PatchedIsracardScraper extends IsracardScraper {
     const after = await formReport(page);
     if (process.env.FB_DEBUG_DIR) await page.screenshot({ path: require('path').join(process.env.FB_DEBUG_DIR, 'isracard-login.png') }).catch(() => {});
     const failed = await page.evaluate((src) => new RegExp(src).test(document.body.innerText), ERROR_RE.source).catch(() => false);
-    return { success: false, errorType: failed ? ScraperErrorTypes.InvalidPassword : ScraperErrorTypes.Generic, errorMessage: failed ? undefined : `Isracard login did not complete ${JSON.stringify({ before: this.lastReport, after })}` };
+    return { success: false, errorType: failed ? ScraperErrorTypes.InvalidPassword : ScraperErrorTypes.Generic, errorMessage: failed ? undefined : `Isracard login did not complete ${JSON.stringify({ before: this.lastReport, after, responses: this.seen })}` };
   }
 }
 
