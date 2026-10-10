@@ -26,10 +26,13 @@ test('עדכון אמיתי מול ריפו מקומי: בדיקה, משיכה �
   fs.writeFileSync(path.join(a, 'f.txt'), '2'); git(a, 'commit', '-am', 'שינוי חדש'); git(a, 'push');
   const c = await up.check();
   assert.equal(c.behind, 1); assert.equal(c.message, 'שינוי חדש');
+  fs.writeFileSync(path.join(b, 'f.txt'), 'שינוי מקומי שנוצר ע"י npm'); // שינוי מקומי שבעבר חסם את העדכון
+  fs.writeFileSync(path.join(b, 'untracked-data.db'), 'data'); // קובץ שלא במעקב (כמו data) חייב לשרוד
   const r = await up.apply();
   assert.equal(r.ok, true); assert.notEqual(r.from, r.to);
   assert.equal(fs.readFileSync(path.join(b, 'f.txt'), 'utf8'), '2');
   assert.equal(installs, 1);
+  assert.equal(fs.readFileSync(path.join(b, 'untracked-data.db'), 'utf8'), 'data');
   await new Promise((res) => setTimeout(res, 1000));
   assert.equal(restarted, 1);
   assert.equal((await up.check()).behind, 0);

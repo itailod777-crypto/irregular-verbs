@@ -39,7 +39,9 @@ function createUpdater({ dir = path.join(__dirname, '..'), git = (args) => run('
       try {
         const v = await info();
         if (!v.hasGit) throw new Error('האפליקציה הותקנה בלי Git, ולכן אי אפשר לעדכן מכאן');
-        await git(['pull', '--ff-only', 'origin', v.branch]);
+        // fetch + reset: מביא את הגרסה החדשה גם אם npm שינה קבצים מקומית או שקבצים נמחקו בטעות. הנתונים (תיקיית data) לא במעקב ולא נפגעים.
+        await git(['fetch', 'origin', v.branch]);
+        await git(['reset', '--hard', `origin/${v.branch}`]);
         await npmInstall();
         const after = await info();
         setTimeout(() => restart(), 800); // נותן לתשובה להישלח לפני שהשרת נסגר

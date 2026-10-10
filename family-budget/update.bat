@@ -16,7 +16,8 @@ cd /d "%~dp0"
   echo Stopping the app server...
   for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":3000 " ^| findstr LISTENING') do taskkill /f /pid %%p >nul 2>nul
   echo Downloading the latest version...
-  git -C "%~dp0.." pull origin claude/adoring-planck-5kbmev
+  git -C "%~dp0.." fetch origin claude/adoring-planck-5kbmev
+  git -C "%~dp0.." reset --hard origin/claude/adoring-planck-5kbmev
   if errorlevel 1 (
     echo Update failed. Your data is safe. Send the message above to Claude.
     pause
