@@ -5,6 +5,12 @@
 const MaxScraper = require('israeli-bank-scrapers/lib/scrapers/max').default;
 
 const PASSWORD_TAB_TEXT = 'כניסה עם סיסמה';
+const ERROR_TEXT = 'שכחת את הפרטים'; // ההודעה האדומה של מקס כשהפרטים שגויים
+const { LoginResults } = require('israeli-bank-scrapers/lib/scrapers/base-scraper-with-browser');
+
+async function hasLoginError(page) {
+  try { return await page.evaluate((t) => document.body.innerText.includes(t), ERROR_TEXT); } catch { return false; }
+}
 
 async function openPasswordTab(page) {
   const handle = await page.evaluateHandle((text) => {
@@ -56,6 +62,14 @@ class PatchedMaxScraper extends MaxScraper {
       checkReadiness: async () => {
         await this.page.waitForFunction(() => !!document.querySelector('.personal-area > a.go-to-personal-area') || !!document.querySelector('input[type=password]') || document.body.innerText.includes('כניסה עם סיסמה'), { timeout: 60000 });
       },
+      // אחרי לחיצה על "כניסה": ממתינים או למעבר לאזור האישי או להודעת השגיאה של מקס
+      postAction: async () => {
+        await this.page.waitForFunction((t) => location.href.includes('/homepage') || document.body.innerText.includes(t), { timeout: 45000 }, ERROR_TEXT).catch(() => {});
+      },
+      possibleResults: {
+        ...base.possibleResults,
+        [LoginResults.InvalidPassword]: [async () => hasLoginError(this.page)],
+      },
       preAction: async () => {
         const page = this.page;
         if (await page.$('.personal-area > a.go-to-personal-area')) await base.preAction(); // הדף הישן
@@ -68,4 +82,4 @@ class PatchedMaxScraper extends MaxScraper {
   }
 }
 
-module.exports = { PatchedMaxScraper, openPasswordTab, tagLoginFields };
+module.exports = { PatchedMaxScraper, openPasswordTab, tagLoginFields, hasLoginError };

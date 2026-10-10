@@ -28,6 +28,10 @@ test('כניסה למקס: מזהה את הטופס החדש (לשונית סי�
   assert.deepEqual(vals, { pw: 'demo-user', pass: 'demo-pass', idTab: '' }, 'הערכים נכנסו לטופס הנכון ולא ללשונית תעודת הזהות');
   await page.click('[data-fb="submit"]');
   assert.equal(await page.evaluate(() => window.clicked), true, 'נלחץ כפתור הכניסה הנכון, לא "שלחו לי קוד"');
+  const { hasLoginError } = require('../src/max-login');
+  assert.equal(await hasLoginError(page), false, 'אין הודעת שגיאה לפני שמקס דחה את הפרטים');
+  await page.evaluate(() => { const d = document.createElement('div'); d.textContent = 'שכחת את הפרטים? אפשר לנסות להיכנס עם תעודת זהות או לשחזר בקלות'; document.body.append(d); });
+  assert.equal(await hasLoginError(page), true, 'מזהה את הודעת "פרטים שגויים" של מקס');
 });
 
 test('הכניסה המתוקנת של מקס נטענת ומחליפה את המקורית רק עבור מקס', () => {
@@ -36,6 +40,9 @@ test('הכניסה המתוקנת של מקס נטענת ומחליפה את ה�
   const o = new PatchedMaxScraper({ companyId: 'max', startDate: new Date() }).getLoginOptions({ username: 'u', password: 'p' });
   assert.equal(o.submitButtonSelector, '[data-fb="submit"]');
   assert.deepEqual(o.fields.map((f) => f.value), ['u', 'p']);
-  assert.equal(typeof o.preAction, 'function'); assert.equal(typeof o.checkReadiness, 'function');
+  assert.equal(typeof o.preAction, 'function'); assert.equal(typeof o.checkReadiness, 'function'); assert.equal(typeof o.postAction, 'function');
+  const { LoginResults } = require('israeli-bank-scrapers/lib/scrapers/base-scraper-with-browser');
+  assert.equal(typeof o.possibleResults[LoginResults.InvalidPassword][0], 'function', 'שגיאת פרטים מוחזרת כ-INVALID_PASSWORD (ומשהה את הכרטיס)');
+  assert.ok(o.possibleResults[LoginResults.Success], 'ההצלחה המקורית נשמרה');
   assert.match(require('fs').readFileSync(require('path').join(__dirname, '..', 'src', 'sync.js'), 'utf8'), /companyId === 'max' \? new \(require\('\.\/max-login'\)/);
 });
