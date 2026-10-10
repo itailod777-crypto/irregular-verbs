@@ -398,3 +398,24 @@ test('מפסק בטיחות: כשל בכניסה משהה את הכרטיס ול
   mode = 'ok'; await run({ accountId: id });
   assert.deepEqual({ ...acct() }, { paused: 0, fail_count: 0 });
 });
+
+test('סריקה עם דפדפן משלנו (נגד חסימת בוטים): מועבר לספרייה, עם כותרת עברית, ונסגר תמיד', async (t) => {
+  const { runSync } = require('../src/sync');
+  const ctx = await startApp(); t.after(ctx.close);
+  await ctx.call('POST', '/api/vault/init', { password: 'סיסמת-על-ארוכה-123' });
+  await ctx.call('POST', '/api/accounts', { label: 'ישראכרט', company: 'isracard', credentials: { id: '123456789', card6Digits: '123456', password: 'p' } });
+  const seen = { launched: null, closed: 0, headers: null };
+  const fakeBrowser = { close: async () => { seen.closed++; } };
+  const launchBrowser = async (o) => { seen.launched = o; return fakeBrowser; };
+  const createScraperImpl = (opts) => ({ scrape: async () => {
+    const page = { setExtraHTTPHeaders: async (h) => { seen.headers = h; } };
+    await opts.preparePage(page);
+    assert.equal(opts.browser, fakeBrowser, 'הדפדפן שלנו מועבר לספרייה');
+    return { success: false, errorType: 'GENERIC', errorMessage: 'x' };
+  } });
+  const r = await runSync({ db: ctx.db, vault: ctx.vault, createScraperImpl, launchBrowser });
+  assert.equal(r[0].status, 'error');
+  assert.match(seen.headers['accept-language'], /^he-IL/);
+  assert.equal(seen.closed, 1, 'הדפדפן נסגר גם בכשל');
+  assert.ok('executablePath' in seen.launched && 'showBrowser' in seen.launched);
+});

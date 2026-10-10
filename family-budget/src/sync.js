@@ -65,12 +65,19 @@ function acquireLock(db) {
 }
 function releaseLock(db) { setSetting(db, 'sync_lock', 0); }
 
-async function syncAccount({ db, vault, account, createScraperImpl, now = new Date() }) {
+// דפדפן משלנו, כמו שדווח בתיקון לחסימת בוטים של ישראכרט (issue #1181): בלי דגל האוטומציה, עם שפה עברית
+const HE_HEADERS = { 'accept-language': 'he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7' };
+async function launchOwnBrowser({ executablePath, showBrowser }) {
+  const puppeteer = require('puppeteer');
+  return puppeteer.launch({ ...(executablePath ? { executablePath } : {}), headless: !showBrowser, ignoreDefaultArgs: ['--enable-automation'], args: ['--lang=he-IL', '--disable-blink-features=AutomationControlled', ...(process.getuid && process.getuid() === 0 ? ['--no-sandbox'] : [])] });
+}
+
+async function syncAccount({ db, vault, account, createScraperImpl, launchBrowser, now = new Date() }) {
   const startedAt = now.toISOString();
   const log = db.prepare('INSERT INTO sync_log (started_at, account_id, account_label, status) VALUES (?,?,?,?)')
     .run(startedAt, account.id, account.label, 'running');
   const logId = Number(log.lastInsertRowid);
-  let creds = null;
+  let creds = null, browser = null;
   const finish = (status, extra = {}) => {
     db.prepare('UPDATE sync_log SET finished_at=?, status=?, added=?, duplicates=?, pending_skipped=?, error=? WHERE id=?')
       .run(new Date().toISOString(), status, extra.added || 0, extra.duplicates || 0, extra.pendingSkipped || 0, extra.error || null, logId);
@@ -90,9 +97,11 @@ async function syncAccount({ db, vault, account, createScraperImpl, now = new Da
       ? new Date(new Date(account.last_sync).getTime() - 14 * 86400000) // חפיפה של שבועיים; הכפילויות מסוננות
       : new Date(now.getFullYear(), now.getMonth() - initialMonths, now.getDate());
     const executablePath = findBrowser();
+    const showBrowser = getSetting(db, 'show_browser', '0') === '1';
+    if (launchBrowser) browser = await launchBrowser({ executablePath, showBrowser });
     const scraper = createScraperImpl({
-      ...(executablePath ? { executablePath } : {}), companyId: account.company, startDate: start, combineInstallments: false,
-      showBrowser: getSetting(db, 'show_browser', '0') === '1', // לבדיקה: רואים את הדפדפן עובד
+      ...(browser ? { browser, preparePage: async (page) => { await page.setExtraHTTPHeaders(HE_HEADERS); } } : executablePath ? { executablePath } : {}), companyId: account.company, startDate: start, combineInstallments: false,
+      showBrowser, // לבדיקה: רואים את הדפדפן עובד
       verbose: false, navigationRetryCount: 2, timeout: 120000, defaultTimeout: 120000, // אתרי בנקים איטיים, 2 דקות לכל שלב
     });
     const { otpLongTermToken, ...rest } = creds;
@@ -108,11 +117,14 @@ async function syncAccount({ db, vault, account, createScraperImpl, now = new Da
     return finish('ok', { added: r.added, duplicates: r.duplicates, pendingSkipped });
   } catch (e) {
     return finish('error', { error: redact(e && e.message, creds) });
+  } finally {
+    if (browser) await browser.close().catch(() => {});
   }
 }
 
-async function runSync({ db, vault, accountId = null, createScraperImpl, now }) {
+async function runSync({ db, vault, accountId = null, createScraperImpl, launchBrowser, now }) {
   if (!createScraperImpl) {
+    launchBrowser = launchBrowser || launchOwnBrowser;
     const { createScraper } = require('israeli-bank-scrapers');
     // מקס: כניסה מותאמת לדף החדש שלהם (ראו src/max-login.js). שאר החברות: הספרייה כמות שהיא.
     createScraperImpl = (opts) => (opts.companyId === 'max' ? new (require('./max-login').PatchedMaxScraper)(opts) : createScraper(opts));
@@ -125,7 +137,7 @@ async function runSync({ db, vault, accountId = null, createScraperImpl, now }) 
     const accounts = accountId
       ? db.prepare('SELECT * FROM accounts WHERE id=?').all(accountId)
       : db.prepare('SELECT * FROM accounts WHERE paused=0 ORDER BY id').all();
-    for (const account of accounts) results.push(await syncAccount({ db, vault, account, createScraperImpl, now }));
+    for (const account of accounts) results.push(await syncAccount({ db, vault, account, createScraperImpl, launchBrowser, now }));
     if (!accountId) for (const a of db.prepare('SELECT id, label FROM accounts WHERE paused=1').all()) results.push({ accountId: a.id, label: a.label, status: 'paused', paused: true });
   } finally { releaseLock(db); }
   const failed = results.filter((r) => r.status === 'error');
@@ -133,4 +145,4 @@ async function runSync({ db, vault, accountId = null, createScraperImpl, now }) 
   return results;
 }
 
-module.exports = { runSync, mapTransactions, israelDate, redact, findBrowser, browserCandidates };
+module.exports = { launchOwnBrowser, runSync, mapTransactions, israelDate, redact, findBrowser, browserCandidates };
