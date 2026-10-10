@@ -53,9 +53,16 @@ const readValue = (page, sel) => page.$eval(sel, (e) => e.value).catch(() => '')
 // מנסים להקליד, בודקים שכל הערך נכנס, ואם לא: מנסים שוב ובסוף מציבים את הערך ישירות ומודיעים לדף.
 async function typeInto(page, sel, value) {
   const want = String(value);
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 4; attempt++) {
     await page.click(sel, { clickCount: 3 });
     await page.keyboard.press('Backspace');
+    if (attempt === 0 || attempt === 2) {
+      // הדבקה כטקסט אחד (כמו הדבקה אמיתית): אירוע input אחד במקום הקשה תו-תו שהדף של ישראכרט מפספס
+      await page.evaluate((q, v) => { const e = document.querySelector(q); e.focus(); e.select(); document.execCommand('insertText', false, v); }, sel, want).catch(() => {});
+      await new Promise((r) => setTimeout(r, 300));
+      if ((await readValue(page, sel)) === want) return true;
+      continue;
+    }
     for (const ch of want) {
       if (!(await page.$(sel))) break;
       await page.type(sel, ch, { delay: 30 });
