@@ -93,6 +93,11 @@ class PatchedIsracardScraper extends IsracardScraper {
   async login(credentials) {
     const page = this.page;
     await maskHeadlessUserAgent(page);
+    // כמו בכניסה המקורית של הספרייה: חוסמים את סקריפט הזיהוי (glassbox) שעוטף את fetch וגורם ל-"Failed to fetch" בקריאות הנתונים
+    await page.setRequestInterception(true);
+    page.on('request', (request) => {
+      if (request.url().includes('detector-dom.min.js')) void request.abort(); else void request.continue();
+    });
     await this.navigateTo(`${this.baseUrl}/personalarea/Login`);
     if (!(await openPasswordMode(page))) throw new Error('Isracard login form not recognized (no password-mode button)');
     await page.waitForSelector('input[type=password]', { visible: true, timeout: 30000 });
@@ -128,7 +133,7 @@ class PatchedIsracardScraper extends IsracardScraper {
     // אם הלחיצה לא יצרה שום בקשה לשרת (הדף חסם בעצמו), מנסים פעם אחת Enter בשדה הסיסמה, כמו משתמש
     await new Promise((r) => setTimeout(r, 3000));
     if (!seen.length && /personalarea\/Login/i.test(page.url())) { await page.focus('[data-fb="pass"]').catch(() => {}); await page.keyboard.press('Enter'); }
-    await page.waitForFunction((src) => !/personalarea\/Login/i.test(location.href) || new RegExp(src).test(document.body.innerText), { timeout: 45000 }, ERROR_RE.source).catch(() => {});
+    await page.waitForFunction((src) => !/personalarea\/Login/i.test(location.href) || new RegExp(src).test(document.body.innerText), { timeout: this.options.showBrowser ? 180000 : 45000 }, ERROR_RE.source).catch(() => {});
     if (!/personalarea\/Login/i.test(page.url())) {
       // אחרי הכניסה האתר עוד מנווט כמה פעמים; קריאות הנתונים רצות בתוך הדף ונופלות אם הוא באמצע מעבר
       await page.waitForNetworkIdle({ idleTime: 2000, timeout: 30000 }).catch(() => {});
@@ -147,7 +152,8 @@ PatchedIsracardScraper.prototype.fetchData = async function fetchData() {
   for (let attempt = 1; ; attempt++) {
     try { return await base.call(this); } catch (e) {
       const msg = String((e && e.message) || e);
-      if (attempt < 3 && /context was destroyed|navigation|detached|Target closed/i.test(msg)) { // הדף עבר ניווט באמצע: ממתינים ומנסים שוב
+      if (attempt < 3 && /Failed to fetch|context was destroyed|navigation|detached|Target closed/i.test(msg)) {
+        if (/Failed to fetch/i.test(msg)) await this.page.goto(this.cardListPageUrl, { waitUntil: 'domcontentloaded' }).catch(() => {}); // עמוד ביניים (StatusPage): עוברים לעמוד הכרטיסים ומנסים שוב // הדף עבר ניווט באמצע: ממתינים ומנסים שוב
         await this.page.waitForNetworkIdle({ idleTime: 1500, timeout: 20000 }).catch(() => {});
         continue;
       }
