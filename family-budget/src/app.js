@@ -304,12 +304,12 @@ function createApp({ db, vault, port, createScraperImpl, lan }) {
     res.json({ ok: true });
   }));
   app.get('/api/months', wrap((req, res) => res.json(db.prepare('SELECT DISTINCT substr(date,1,7) m FROM transactions ORDER BY m DESC').all().map((r) => r.m))));
-  const SETTING_KEYS = ['ntfy_topic', 'ntfy_server', 'auto_sync', 'sync_hour', 'initial_months', 'savings_goal'];
+  const SETTING_KEYS = ['ntfy_topic', 'ntfy_server', 'auto_sync', 'sync_hour', 'initial_months', 'savings_goal', 'show_browser'];
   app.get('/api/settings', wrap((req, res) => {
     const isAdm = !req.authEnabled || req.user.role === 'admin';
     res.json({
     ntfy_topic: isAdm ? getSetting(db, 'ntfy_topic', '') : '', ntfy_server: isAdm ? getSetting(db, 'ntfy_server', '') : '',
-    auto_sync: getSetting(db, 'auto_sync', '1'), savings_goal: getSetting(db, 'savings_goal', ''), sync_hour: getSetting(db, 'sync_hour', '6'), initial_months: getSetting(db, 'initial_months', '6'),
+    auto_sync: getSetting(db, 'auto_sync', '1'), savings_goal: getSetting(db, 'savings_goal', ''), show_browser: getSetting(db, 'show_browser', '0'), sync_hour: getSetting(db, 'sync_hour', '6'), initial_months: getSetting(db, 'initial_months', '6'),
     });
   }));
   app.put('/api/settings', wrap((req, res) => {
@@ -323,6 +323,7 @@ function createApp({ db, vault, port, createScraperImpl, lan }) {
       if (k === 'sync_hour') need(/^([0-9]|1[0-9]|2[0-3])$/.test(v), 'שעה בין 0 ל-23');
       if (k === 'initial_months') need(/^([1-9]|1[0-2])$/.test(v), 'חודשים בין 1 ל-12');
       if (k === 'savings_goal') need(v === '' || (Number.isFinite(Number(v)) && Number(v) >= 0), 'יעד חיסכון לא תקין');
+      if (k === 'show_browser') need(v === '0' || v === '1', 'ערך לא תקין');
       if (k === 'auto_sync') need(v === '0' || v === '1', 'ערך לא תקין');
       setSetting(db, k, v);
     }

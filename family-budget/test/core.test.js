@@ -161,6 +161,8 @@ test('משיכה: סורק מדומה, המרת תאריך ישראלי, דיל�
 
   const run = async () => { await call('POST', '/api/sync'); for (let i = 0; i < 100 && ctx.app._state.syncing; i++) await new Promise((r) => setTimeout(r, 20)); };
   await run();
+  assert.ok(calls[0].opts.timeout >= 60000 && calls[0].opts.defaultTimeout >= 60000, 'זמני המתנה ארוכים לאתרי בנקים איטיים');
+  assert.equal(calls[0].opts.showBrowser, false);
   const rows = db.prepare('SELECT date, amount FROM transactions ORDER BY date').all();
   assert.deepEqual(rows.map((r) => r.date), ['2026-09-03', '2026-09-06']);
   const log1 = db.prepare('SELECT * FROM sync_log ORDER BY id DESC LIMIT 1').get();

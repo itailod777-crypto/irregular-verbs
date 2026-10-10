@@ -86,8 +86,9 @@ async function syncAccount({ db, vault, account, createScraperImpl, now = new Da
       : new Date(now.getFullYear(), now.getMonth() - initialMonths, now.getDate());
     const executablePath = findBrowser();
     const scraper = createScraperImpl({
-      ...(executablePath ? { executablePath } : {}), companyId: account.company, startDate: start, combineInstallments: false, showBrowser: false,
-      verbose: false, navigationRetryCount: 1,
+      ...(executablePath ? { executablePath } : {}), companyId: account.company, startDate: start, combineInstallments: false,
+      showBrowser: getSetting(db, 'show_browser', '0') === '1', // לבדיקה: רואים את הדפדפן עובד
+      verbose: false, navigationRetryCount: 2, timeout: 120000, defaultTimeout: 120000, // אתרי בנקים איטיים, 2 דקות לכל שלב
     });
     const { otpLongTermToken, ...rest } = creds;
     const result = await scraper.scrape(otpLongTermToken ? { ...rest, otpLongTermToken } : rest);

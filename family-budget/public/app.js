@@ -62,7 +62,7 @@ function friendlyError(m = '') {
   if (/INVALID_PASSWORD/.test(m)) return 'שם המשתמש או הסיסמה לא נכונים. לחצו על "עדכון סיסמה" בכרטיס.';
   if (/CHANGE_PASSWORD/.test(m)) return 'האתר מבקש להחליף סיסמה. היכנסו לאתר, החליפו סיסמה, ואז עדכנו אותה כאן.';
   if (/ACCOUNT_BLOCKED/.test(m)) return 'החשבון ננעל. צריך לפנות לחברה כדי לשחרר אותו.';
-  if (/TIMEOUT|timed? ?out|Navigation/i.test(m)) return 'האתר לא הגיב בזמן. נסו שוב בעוד כמה דקות.';
+  if (/TIMEOUT|timed? ?out|Navigation/i.test(m)) return 'האתר של הכרטיס לא הגיב בזמן. נסו שוב בעוד כמה דקות. אם זה חוזר, הפעילו "הצג את הדפדפן בזמן העדכון" בהגדרות מתקדמות כדי לראות מה קורה.';
   if (/Chrome|browser|puppeteer/i.test(m)) return 'לא נמצא Chrome או Edge במחשב. התקינו אחד מהם ונסו שוב.';
   if (/לא נמצאו פרטי כניסה/.test(m)) return 'חסרים פרטי כניסה. לחצו על "עדכון סיסמה" בכרטיס.';
   return 'משהו השתבש באתר. אפשר לנסות שוב מאוחר יותר.';
@@ -546,14 +546,15 @@ async function pageAccounts(view) {
   const topic = h('input', { value: settings.ntfy_topic, placeholder: 'למשל: budget-x7k29q', dir: 'ltr' });
   const server = h('input', { value: settings.ntfy_server, placeholder: 'https://ntfy.sh', dir: 'ltr' });
   const auto = h('input', { type: 'checkbox', checked: settings.auto_sync === '1' });
+  const showB = h('input', { type: 'checkbox', checked: settings.show_browser === '1' });
   const hour = h('input', { type: 'number', min: '0', max: '23', value: settings.sync_hour });
   const saveS = h('button', { class: 'btn primary', type: 'button' }, 'שמירה');
-  saveS.addEventListener('click', busy(saveS, async () => { await api('PUT', '/api/settings', { ntfy_topic: topic.value, ntfy_server: server.value, auto_sync: auto.checked ? '1' : '0', sync_hour: hour.value }); toast('נשמר'); }));
+  saveS.addEventListener('click', busy(saveS, async () => { await api('PUT', '/api/settings', { ntfy_topic: topic.value, ntfy_server: server.value, auto_sync: auto.checked ? '1' : '0', show_browser: showB.checked ? '1' : '0', sync_hour: hour.value }); toast('נשמר'); }));
   const test = h('button', { class: 'btn', type: 'button' }, 'שליחת הודעת בדיקה');
   test.addEventListener('click', busy(test, async () => { await api('POST', '/api/settings/test-notify'); toast('נשלחה'); }));
   frag.append(h('div', { class: 'grid g2' },
     isAdmin() && h('div', { class: 'card' }, h('details', {}, h('summary', {}, 'הגדרות מתקדמות'), h('div', { class: 'stack-gap', style: { marginTop: '12px' } },
-      h('label', { class: 'field inline' }, auto, 'לעדכן עסקאות אוטומטית פעם ביום (כשהאפליקציה פתוחה)'), field('באיזו שעה בערך? (0-23)', hour),
+      h('label', { class: 'field inline' }, auto, 'לעדכן עסקאות אוטומטית פעם ביום (כשהאפליקציה פתוחה)'), h('label', { class: 'field inline' }, showB, 'הצג את הדפדפן בזמן העדכון (לבדיקת תקלות: רואים אם האתר מבקש אימות)'), field('באיזו שעה בערך? (0-23)', hour),
       field('התראה לטלפון כשהעדכון נכשל (לא חובה)', topic, 'אפשר להתקין את האפליקציה ntfy בטלפון ולהירשם לאותו שם. ההודעה לא כוללת סכומים.'), field('כתובת שרת ntfy (לא חובה)', server), h('div', { class: 'actions' }, saveS, test)))),
     h('div', { class: 'card' }, h('details', {}, h('summary', {}, `יומן עדכונים (${log.length})`), log.length ? h('div', { class: 'table-wrap', style: { maxHeight: '320px', overflowY: 'auto' } }, h('table', {}, h('tbody', {}, log.map((l) => h('tr', {}, h('td', {}, new Date(l.started_at).toLocaleString('he-IL')), h('td', {}, l.account_label || ''),
       h('td', {}, l.status === 'ok' ? `✓ נוספו ${l.added}, כפולות ${l.duplicates}` : l.status === 'running' ? '… רץ' : h('span', { class: 'neg' }, '✘ ' + (l.error || '').slice(0, 140)))))))) : h('p', { class: 'hint' }, 'עוד לא בוצעו עדכונים')))));
