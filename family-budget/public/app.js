@@ -728,7 +728,16 @@ const PAGES = { home: pageHome, recurring: pageRecurring, onetime: pageOneTime, 
     safeStore('theme', next || 'auto'); toast(next === 'dark' ? 'מצב כהה' : next === 'light' ? 'מצב בהיר' : 'מצב אוטומטי');
   });
   window.addEventListener('hashchange', render);
-  try { state.auth = await api('GET', '/api/auth/state'); } catch (e) { document.getElementById('view').replaceChildren(h('div', { class: 'card empty' }, h('h3', {}, 'לא ניתן להתחבר לשרת'), e.message)); return; }
+  // השרת יכול להיות עדיין בעלייה (אחרי הפעלה או עדכון): מנסים שוב כמה פעמים לפני שמוותרים
+  document.getElementById('view').replaceChildren(h('div', { class: 'card empty fade-in' }, h('span', { class: 'spinner' }), h('h3', {}, 'מפעיל את האפליקציה...'), h('p', {}, 'זה לוקח כמה שניות.')));
+  let authErr = null;
+  for (let i = 0; i < 25 && !state.auth; i++) {
+    try { state.auth = await api('GET', '/api/auth/state'); } catch (e) { authErr = e; await new Promise((r) => setTimeout(r, 2000)); }
+  }
+  if (!state.auth) {
+    document.getElementById('view').replaceChildren(h('div', { class: 'card empty' }, h('h3', {}, 'לא ניתן להתחבר לשרת'), h('p', {}, 'השרת של האפליקציה לא רץ. נסו לפתוח שוב את האפליקציה מהאייקון, או להפעיל את repair.bat.'), h('p', { class: 'hint' }, authErr ? authErr.message : ''), h('button', { class: 'btn primary', type: 'button', onclick: () => location.reload() }, 'ניסיון נוסף')));
+    return;
+  }
   if (state.auth.usersExist && !state.auth.user) { showLogin(); return; }
   renderUserChip();
   document.getElementById('tabs').append(...ROUTES.filter(([id]) => id !== 'family' || isAdmin()).map(([id, label, ic]) => h('a', { href: `#/${id}`, 'data-route': id }, icon(ic, 18), label)));
