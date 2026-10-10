@@ -59,3 +59,11 @@ test('API עדכון: מנהל בלבד, לא בזמן עדכון עסקאות, 
   for (const [meth, url] of [['GET', '/api/version'], ['POST', '/api/version/check'], ['POST', '/api/update']]) assert.equal((await m(meth, url)).status, 403, url);
   assert.equal(calls.length, 1);
 });
+
+test('restart.bat קיים, בפורמט Windows, ומפעיל את app.vbs מהתיקייה שלו', () => {
+  const raw = fs.readFileSync(path.join(__dirname, '..', 'restart.bat'), 'utf8');
+  assert.ok(raw.includes('\r\n'), 'שורות CRLF');
+  assert.match(raw, /wscript "%~dp0app\.vbs" hidden/);
+  assert.ok(fs.existsSync(path.join(__dirname, '..', 'app.vbs')));
+  assert.match(fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8'), /'cmd\.exe', \['\/c', 'restart\.bat'\]/);
+});

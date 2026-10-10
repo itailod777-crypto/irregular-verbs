@@ -28,7 +28,7 @@ const restart = () => {
   if (process.versions.electron) { const { app: ea } = require('electron'); ea.relaunch(); ea.exit(0); return; }
   const dir = __dirname;
   const child = process.platform === 'win32'
-    ? spawn('cmd.exe', ['/c', `ping -n 4 127.0.0.1 >nul & wscript "${path.join(dir, 'app.vbs')}" hidden`], { cwd: dir, detached: true, stdio: 'ignore', windowsHide: true })
+    ? spawn('cmd.exe', ['/c', 'restart.bat'], { cwd: dir, detached: true, stdio: 'ignore', windowsHide: true }) // קובץ קבוע: בלי בעיות מירכאות ב-Windows
     : spawn('sh', ['-c', `sleep 3; exec node "${path.join(dir, 'server.js')}"`], { cwd: dir, detached: true, stdio: 'ignore' });
   child.unref();
   process.exit(0);
