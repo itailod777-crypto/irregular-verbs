@@ -105,7 +105,13 @@ async function syncAccount({ db, vault, account, createScraperImpl, launchBrowse
       verbose: false, navigationRetryCount: 2, timeout: 120000, defaultTimeout: 120000, // אתרי בנקים איטיים, 2 דקות לכל שלב
     });
     const { otpLongTermToken, ...rest } = creds;
-    const result = await scraper.scrape(otpLongTermToken ? { ...rest, otpLongTermToken } : rest);
+    // מגבלת זמן כוללת לכרטיס: אם משהו נתקע (למשל הדפדפן נשאר פתוח), סוגרים אותו ומדווחים באיזה שלב זה נעצר
+    let stage = 'start', timer;
+    if (typeof scraper.onProgress === 'function') scraper.onProgress((_c, p) => { stage = (p && p.type) || stage; });
+    const work = scraper.scrape(otpLongTermToken ? { ...rest, otpLongTermToken } : rest);
+    work.catch(() => {});
+    const limit = Number(process.env.FB_SCRAPE_LIMIT_MS) || 5 * 60 * 1000;
+    const result = await Promise.race([work, new Promise((_, rej) => { timer = setTimeout(() => rej(new Error(`TIMEOUT: המשיכה נתקעה יותר מ-${Math.round(limit / 60000)} דקות בשלב ${stage}; הדפדפן נסגר. עמוד: ${(() => { try { return new URL(scraper.page.url()).pathname; } catch { return '?'; } })()}`)), limit); })]).finally(() => clearTimeout(timer));
     if (!result.success) {
       const type = result.errorType || 'GENERIC';
       const hint = type === 'INVALID_PASSWORD' ? ' (בדוק סיסמה / ייתכן שהחשבון ננעל)'
