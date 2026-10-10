@@ -99,6 +99,10 @@ class PatchedIsracardScraper extends IsracardScraper {
       if (request.url().includes('detector-dom.min.js')) void request.abort(); else void request.continue();
     });
     await this.navigateTo(`${this.baseUrl}/personalarea/Login`);
+    if (!/personalarea\/Login/i.test(page.url())) { // הפרופיל הקבוע כבר מחובר: אין צורך בכניסה
+      await page.waitForNetworkIdle({ idleTime: 1500, timeout: 20000 }).catch(() => {});
+      return { success: true };
+    }
     if (!(await openPasswordMode(page))) throw new Error('Isracard login form not recognized (no password-mode button)');
     await page.waitForSelector('input[type=password]', { visible: true, timeout: 30000 });
     const r = await tagLoginFields(page);

@@ -67,9 +67,11 @@ function releaseLock(db) { setSetting(db, 'sync_lock', 0); }
 
 // דפדפן משלנו, כמו שדווח בתיקון לחסימת בוטים של ישראכרט (issue #1181): בלי דגל האוטומציה, עם שפה עברית
 const HE_HEADERS = { 'accept-language': 'he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7' };
-async function launchOwnBrowser({ executablePath, showBrowser }) {
+async function launchOwnBrowser({ executablePath, showBrowser, profileDir }) {
   const puppeteer = require('puppeteer');
-  return puppeteer.launch({ ...(executablePath ? { executablePath } : {}), headless: !showBrowser, ignoreDefaultArgs: ['--enable-automation'], args: ['--lang=he-IL', '--disable-blink-features=AutomationControlled', ...(process.getuid && process.getuid() === 0 ? ['--no-sandbox'] : [])] });
+  if (profileDir) require('fs').mkdirSync(profileDir, { recursive: true, mode: 0o700 });
+  // פרופיל קבוע לכל כרטיס (בתוך data, מחוץ ל-git): עוגיות והיסטוריה נשמרים בין הפעמים, והאתר "מכיר" את הדפדפן במקום לראות דפדפן ריק בכל פעם
+  return puppeteer.launch({ ...(executablePath ? { executablePath } : {}), ...(profileDir ? { userDataDir: profileDir } : {}), headless: !showBrowser, ignoreDefaultArgs: ['--enable-automation'], args: ['--lang=he-IL', '--disable-blink-features=AutomationControlled', ...(process.getuid && process.getuid() === 0 ? ['--no-sandbox'] : [])] });
 }
 
 async function syncAccount({ db, vault, account, createScraperImpl, launchBrowser, now = new Date() }) {
@@ -98,7 +100,7 @@ async function syncAccount({ db, vault, account, createScraperImpl, launchBrowse
       : new Date(now.getFullYear(), now.getMonth() - initialMonths, now.getDate());
     const executablePath = findBrowser();
     const showBrowser = getSetting(db, 'show_browser', '0') === '1';
-    if (launchBrowser) browser = await launchBrowser({ executablePath, showBrowser });
+    if (launchBrowser) browser = await launchBrowser({ executablePath, showBrowser, profileDir: account.company !== 'isracard' ? undefined : require('path').join(require('./config').DATA_DIR, 'browser-profiles', `${account.company}-${account.id}`) });
     const scraper = createScraperImpl({
       ...(browser ? { browser, preparePage: async (page) => { await page.setExtraHTTPHeaders(HE_HEADERS); } } : executablePath ? { executablePath } : {}), companyId: account.company, startDate: start, combineInstallments: false,
       showBrowser, // לבדיקה: רואים את הדפדפן עובד
