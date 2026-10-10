@@ -10,19 +10,28 @@ const { notifyFailure } = require('./notify');
 const { WrongPasswordError } = require('./crypto');
 const recurring = require('./recurring');
 const { alerts } = require('./alerts');
+const { Auth, isPrivateIp } = require('./auth');
 
-function createApp({ db, vault, port, createScraperImpl }) {
+function createApp({ db, vault, port, createScraperImpl, lan }) {
   const app = express();
   app.disable('x-powered-by');
-  const allowedHosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`]);
-  const allowedOrigins = new Set([...allowedHosts].map((h) => `http://${h}`));
   const state = { syncing: false, unlockFails: 0, lockedUntil: 0 };
+  const auth = new Auth(db);
+  lan = lan || { _on: false, get() { return { enabled: this._on, addresses: [], port }; }, async set(on) { this._on = !!on; } };
+  // Host מותר רק אם הוא localhost או כתובת IP פרטית (כתובת מספרית לא ניתנת ל-DNS rebinding) ובפורט הנכון
+  const hostOk = (hostHeader) => {
+    const m = String(hostHeader || '').match(/^(\[[^\]]+\]|[^:]+)(?::(\d+))?$/);
+    if (!m || Number(m[2]) !== port) return false;
+    const name = m[1];
+    return name === 'localhost' || name === '[::1]' || (/^\d+\.\d+\.\d+\.\d+$/.test(name) && isPrivateIp(name));
+  };
 
-  // הגנה מפני DNS-rebinding ו-CSRF מאתרים אחרים בדפדפן
+  // הגנה: רק מהרשת המקומית, מ-Host תקין, ומבקשות שנשלחו מהאפליקציה עצמה (CSRF)
   app.use((req, res, next) => {
-    if (!allowedHosts.has(req.headers.host)) return res.status(403).json({ error: 'Host לא מורשה' });
+    if (!isPrivateIp(req.socket.remoteAddress)) return res.status(403).json({ error: 'גישה מהרשת הביתית בלבד' });
+    if (!hostOk(req.headers.host)) return res.status(403).json({ error: 'Host לא מורשה' });
     if (req.method !== 'GET' && req.method !== 'HEAD') {
-      if (req.headers.origin && !allowedOrigins.has(req.headers.origin)) return res.status(403).json({ error: 'Origin לא מורשה' });
+      if (req.headers.origin && req.headers.origin !== `http://${req.headers.host}`) return res.status(403).json({ error: 'Origin לא מורשה' });
       if (req.headers['x-requested-with'] !== 'budget') return res.status(403).json({ error: 'בקשה לא מורשית' });
     }
     res.setHeader('Content-Security-Policy', "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
@@ -41,6 +50,48 @@ function createApp({ db, vault, port, createScraperImpl }) {
   const need = (cond, msg) => { if (!cond) { const e = new Error(msg); e.status = 400; throw e; } };
   const intId = (v) => { const n = Number(v); need(Number.isInteger(n) && n > 0, 'מזהה לא תקין'); return n; };
 
+  // ---- משתמשים והתחברות ----
+  // כל עוד לא הוגדרו משתמשים האפליקציה פתוחה (שימוש אישי על המחשב). ברגע שיש משתמשים, כל ה-API דורש התחברות.
+  app.use('/api', (req, res, next) => {
+    req.authEnabled = auth.usersExist();
+    req.user = req.authEnabled ? auth.userFromRequest(req) : null;
+    if (req.authEnabled && !req.user && !req.path.startsWith('/auth/')) return res.status(401).json({ error: 'נדרשת התחברות' });
+    next();
+  });
+  const admin = (req) => { if (req.authEnabled && req.user?.role !== 'admin') { const e = new Error('הפעולה שמורה למנהל המשפחה'); e.status = 403; throw e; } };
+  const ipOf = (req) => req.socket.remoteAddress || '';
+  app.get('/api/auth/state', wrap((req, res) => res.json({ usersExist: req.authEnabled, user: req.user })));
+  app.post('/api/auth/setup', wrap((req, res) => {
+    need(!auth.usersExist(), 'כבר הוגדרו משתמשים');
+    need(['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ipOf(req)), 'את המשתמש הראשון יוצרים מהמחשב עצמו');
+    const id = auth.createUser({ ...req.body, role: 'admin' });
+    res.setHeader('Set-Cookie', auth.cookieFor(auth.createSession(id)));
+    res.json({ ok: true });
+  }));
+  app.post('/api/auth/login', wrap((req, res) => {
+    const u = auth.authenticate(req.body.username, req.body.password, ipOf(req));
+    res.setHeader('Set-Cookie', auth.cookieFor(auth.createSession(u.id)));
+    res.json({ ok: true });
+  }));
+  app.post('/api/auth/logout', wrap((req, res) => { auth.destroySession(req); res.setHeader('Set-Cookie', auth.clearCookie()); res.json({ ok: true }); }));
+  app.post('/api/auth/password', wrap((req, res) => {
+    need(req.user, 'נדרשת התחברות');
+    auth.changeOwnPassword(req.user.id, req.body.current, req.body.next);
+    res.setHeader('Set-Cookie', auth.cookieFor(auth.createSession(req.user.id)));
+    res.json({ ok: true });
+  }));
+  app.get('/api/users', wrap((req, res) => { admin(req); res.json(auth.listUsers()); }));
+  app.post('/api/users', wrap((req, res) => { admin(req); res.json({ id: auth.createUser({ ...req.body, role: req.body.role === 'admin' ? 'admin' : 'member' }) }); }));
+  app.put('/api/users/:id/password', wrap((req, res) => { admin(req); auth.setPassword(intId(req.params.id), req.body.password); res.json({ ok: true }); }));
+  app.delete('/api/users/:id', wrap((req, res) => { admin(req); auth.deleteUser(intId(req.params.id), req.user?.id); res.json({ ok: true }); }));
+  app.get('/api/lan', wrap((req, res) => { admin(req); res.json(lan.get()); }));
+  app.put('/api/lan', wrap(async (req, res) => {
+    admin(req);
+    need(auth.usersExist(), 'קודם צריך ליצור משתמשים עם סיסמה');
+    await lan.set(!!req.body.enabled);
+    res.json(lan.get());
+  }));
+
   // ---- סטטוס וכספת ----
   app.get('/api/status', wrap((req, res) => {
     const accounts = db.prepare('SELECT id,label,company,last_sync,last_status FROM accounts ORDER BY id').all();
@@ -51,12 +102,12 @@ function createApp({ db, vault, port, createScraperImpl }) {
       syncing: state.syncing, accounts: accounts.length, failing, lastSync: last,
     });
   }));
-  app.post('/api/vault/init', wrap((req, res) => {
+  app.post('/api/vault/init', wrap((req, res) => { admin(req);
     need(!vault.exists(), 'הכספת כבר קיימת');
     vault.init(req.body.password);
     res.json({ ok: true });
   }));
-  app.post('/api/vault/unlock', wrap((req, res) => {
+  app.post('/api/vault/unlock', wrap((req, res) => { admin(req);
     if (Date.now() < state.lockedUntil) { const e = new Error('יותר מדי ניסיונות. נסה שוב בעוד דקה.'); e.status = 429; throw e; }
     try { vault.unlock(String(req.body.password || '')); state.unlockFails = 0; res.json({ ok: true }); }
     catch (e) {
@@ -64,7 +115,7 @@ function createApp({ db, vault, port, createScraperImpl }) {
       throw e;
     }
   }));
-  app.post('/api/vault/lock', wrap((req, res) => { vault.lock(); res.json({ ok: true }); }));
+  app.post('/api/vault/lock', wrap((req, res) => { admin(req); vault.lock(); res.json({ ok: true }); }));
 
   // ---- חשבונות (פרטי כניסה נשמרים רק בכספת המוצפנת ולעולם לא מוחזרים) ----
   app.get('/api/companies', wrap((req, res) => res.json(listCompanies())));
@@ -81,7 +132,7 @@ function createApp({ db, vault, port, createScraperImpl }) {
     }
     return creds;
   };
-  app.post('/api/accounts', wrap((req, res) => {
+  app.post('/api/accounts', wrap((req, res) => { admin(req);
     need(vault.isUnlocked(), 'הכספת נעולה');
     const label = String(req.body.label || '').trim();
     need(label, 'חסר שם לחשבון');
@@ -91,7 +142,7 @@ function createApp({ db, vault, port, createScraperImpl }) {
     try { vault.set(id, creds); } catch (e) { db.prepare('DELETE FROM accounts WHERE id=?').run(id); throw e; }
     res.json({ id });
   }));
-  app.put('/api/accounts/:id/credentials', wrap((req, res) => {
+  app.put('/api/accounts/:id/credentials', wrap((req, res) => { admin(req);
     need(vault.isUnlocked(), 'הכספת נעולה');
     const a = db.prepare('SELECT * FROM accounts WHERE id=?').get(intId(req.params.id));
     need(a, 'חשבון לא נמצא');
@@ -99,7 +150,7 @@ function createApp({ db, vault, port, createScraperImpl }) {
     db.prepare('UPDATE accounts SET last_status=NULL WHERE id=?').run(a.id);
     res.json({ ok: true });
   }));
-  app.delete('/api/accounts/:id', wrap((req, res) => {
+  app.delete('/api/accounts/:id', wrap((req, res) => { admin(req);
     need(vault.isUnlocked(), 'הכספת נעולה');
     const id = intId(req.params.id);
     vault.remove(id);
@@ -191,7 +242,7 @@ function createApp({ db, vault, port, createScraperImpl }) {
   app.get('/api/transactions', wrap((req, res) => res.json(store.listTransactions(db, req.query))));
   app.post('/api/transactions', wrap((req, res) => {
     const b = req.body;
-    res.json({ id: store.addManual(db, { date: b.date, amount: b.amount, description: b.description, type: b.type === 'income' ? 'income' : 'expense', categoryId: b.categoryId ? intId(b.categoryId) : null }) });
+    res.json({ id: store.addManual(db, { createdBy: req.user?.id ?? null, date: b.date, amount: b.amount, description: b.description, type: b.type === 'income' ? 'income' : 'expense', categoryId: b.categoryId ? intId(b.categoryId) : null }) });
   }));
   app.patch('/api/transactions/:id', wrap((req, res) => {
     const id = intId(req.params.id);
@@ -254,11 +305,15 @@ function createApp({ db, vault, port, createScraperImpl }) {
   }));
   app.get('/api/months', wrap((req, res) => res.json(db.prepare('SELECT DISTINCT substr(date,1,7) m FROM transactions ORDER BY m DESC').all().map((r) => r.m))));
   const SETTING_KEYS = ['ntfy_topic', 'ntfy_server', 'auto_sync', 'sync_hour', 'initial_months', 'savings_goal'];
-  app.get('/api/settings', wrap((req, res) => res.json({
-    ntfy_topic: getSetting(db, 'ntfy_topic', ''), ntfy_server: getSetting(db, 'ntfy_server', ''),
+  app.get('/api/settings', wrap((req, res) => {
+    const isAdm = !req.authEnabled || req.user.role === 'admin';
+    res.json({
+    ntfy_topic: isAdm ? getSetting(db, 'ntfy_topic', '') : '', ntfy_server: isAdm ? getSetting(db, 'ntfy_server', '') : '',
     auto_sync: getSetting(db, 'auto_sync', '1'), savings_goal: getSetting(db, 'savings_goal', ''), sync_hour: getSetting(db, 'sync_hour', '6'), initial_months: getSetting(db, 'initial_months', '6'),
-  })));
+    });
+  }));
   app.put('/api/settings', wrap((req, res) => {
+    if (req.authEnabled && req.user.role !== 'admin' && Object.keys(req.body).some((k) => k !== 'savings_goal')) { const e = new Error('הפעולה שמורה למנהל המשפחה'); e.status = 403; throw e; }
     const b = req.body;
     for (const k of SETTING_KEYS) {
       if (b[k] === undefined) continue;
@@ -273,7 +328,7 @@ function createApp({ db, vault, port, createScraperImpl }) {
     }
     res.json({ ok: true });
   }));
-  app.post('/api/settings/test-notify', wrap(async (req, res) => {
+  app.post('/api/settings/test-notify', wrap(async (req, res) => { admin(req);
     const r = await notifyFailure(db, 'בדיקת התראה מ-Family Budget');
     need(r.sent, 'ההתראה לא נשלחה. ודא שהוגדר נושא ושיש חיבור לאינטרנט.');
     res.json({ ok: true });

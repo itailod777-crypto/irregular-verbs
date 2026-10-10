@@ -352,3 +352,15 @@ tr.cur-row td { background: color-mix(in srgb, var(--s1) 8%, transparent); font-
 @media (max-width: 900px) { .g3, .g-main, .g2 { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 520px) { .g4 { grid-template-columns: minmax(0, 1fr); } }
 .chart-box, .card { max-width: 100%; }
+
+/* כניסה, משתמשים ומשפחה */
+body.login-mode .topbar { display: none; }
+.login-wrap { min-height: 80vh; display: grid; place-items: center; }
+.login-card { width: min(420px, 100%); text-align: center; padding: 32px 28px; }
+.login-card h1 { margin: 8px 0 2px; letter-spacing: -.02em; }
+.login-card .stack-gap { text-align: start; margin-top: 18px; }
+.user-btn { gap: 8px; padding: 0 14px 0 8px; border-radius: 999px; }
+.avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #1c5cab, #1baf7a); color: #fff; display: inline-grid; place-items: center; font-weight: 800; }
+.url-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 8px 0; padding: 10px 14px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border); }
+.url-row code { font-size: 1.05rem; font-weight: 700; flex: 1; }
+.plain-list { margin: 8px 0 0; padding-inline-start: 20px; display: grid; gap: 6px; color: var(--ink-2); }

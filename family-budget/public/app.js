@@ -14,17 +14,19 @@ const ICONS = {
   prev: 'M9 6l6 6-6 6', next: 'M15 6l-6 6 6 6',
   lock: 'M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4',
   calendar: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
+  users: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
   coin: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM9 9.5C9 8.1 10.3 7 12 7s3 1.1 3 2.5S13.7 12 12 12s-3 1.1-3 2.5S10.3 17 12 17s3-1.1 3-2.5M12 5.5V7M12 17v1.5',
 };
 function icon(name, size = 20) {
   return s('svg', { viewBox: '0 0 24 24', width: size, height: size, fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true' }, s('path', { d: ICONS[name] }));
 }
 
-const state = { year: null, month: null, months: [], cats: [], accounts: [], account: null, status: null, route: 'home' };
+const state = { auth: null, year: null, month: null, months: [], cats: [], accounts: [], account: null, status: null, route: 'home' };
 const ROUTES = [
   ['home', 'בית', 'home'], ['recurring', 'מנויים והוצאות קבועות', 'repeat'], ['onetime', 'הוצאות חד-פעמיות', 'bolt'],
-  ['transactions', 'כל העסקאות', 'list'], ['budget', 'תקציב', 'wallet'], ['year', 'סיכום שנתי', 'calendar'], ['accounts', 'כרטיסים וחשבונות', 'bank'],
+  ['transactions', 'כל העסקאות', 'list'], ['budget', 'תקציב', 'wallet'], ['year', 'סיכום שנתי', 'calendar'], ['family', 'משפחה', 'users'], ['accounts', 'כרטיסים וחשבונות', 'bank'],
 ];
+const isAdmin = () => !state.auth || !state.auth.usersExist || state.auth.user?.role === 'admin';
 const catName = (id) => state.cats.find((c) => c.id === id)?.name || '';
 const acctLabel = (id) => state.accounts.find((a) => a.id === id)?.label || '';
 const q = (path, extra = '') => `${path}?month=${state.month}${state.account ? `&accountId=${state.account}` : ''}${extra}`;
@@ -80,7 +82,8 @@ async function refreshStatus() {
   const box = document.getElementById('banners');
   box.replaceChildren();
   const st = state.status;
-  if (st.vault === 'locked') {
+  if (st.vault === 'locked' && !isAdmin()) box.append(h('div', { class: 'banner info' }, icon('lock'), h('div', { class: 'grow' }, h('strong', {}, 'הכספת נעולה'), 'בקשו ממנהל המשפחה לפתוח אותה כדי שאפשר יהיה לעדכן עסקאות.')));
+  else if (st.vault === 'locked') {
     const pw = h('input', { type: 'password', placeholder: 'הסיסמה האישית', autocomplete: 'current-password', 'aria-label': 'הסיסמה האישית', style: { maxWidth: '240px' } });
     const btn = h('button', { class: 'btn primary sm', type: 'button' }, 'פתיחה');
     const rem = window.desktop ? h('label', { class: 'field inline' }, h('input', { type: 'checkbox' }), 'זכור במחשב הזה') : null;
@@ -360,7 +363,7 @@ async function pageTransactions(view) {
       try { const res = await api('PATCH', `/api/transactions/${t.id}`, { categoryId: Number(sel.value) }); toast('הקטגוריה עודכנה'); if (res.suggestion) suggestRule(t, res.suggestion); else load(); } catch (e) { toast(e.message, true); }
     } }, catOptions(t.category_id));
     return h('tr', {}, h('td', {}, dateLabel(t.date)),
-      h('td', {}, h('div', { class: 'cell-desc', title: t.description }, t.description), h('div', { class: 'chips' }, t.source === 'manual' ? h('span', { class: 'chip' }, 'הוזן ידנית') : null, state.accounts.length > 1 && t.account_id ? h('span', { class: 'chip' }, acctLabel(t.account_id)) : null)),
+      h('td', {}, h('div', { class: 'cell-desc', title: t.description }, t.description), h('div', { class: 'chips' }, t.source === 'manual' ? h('span', { class: 'chip' }, t.created_by_name ? `הוזן על ידי ${t.created_by_name}` : 'הוזן ידנית') : null, state.accounts.length > 1 && t.account_id ? h('span', { class: 'chip' }, acctLabel(t.account_id)) : null)),
       h('td', {}, sel), h('td', { class: 'amt ' + (t.amount > 0 ? 'pos' : '') }, (t.amount > 0 ? '+' : '') + fmt2(t.amount)),
       h('td', {}, t.source === 'manual' ? h('button', { class: 'btn sm danger', type: 'button', onclick: async () => { if (!confirm('למחוק את העסקה?')) return; await api('DELETE', `/api/transactions/${t.id}`); load(); } }, 'מחיקה') : null));
   }
@@ -532,11 +535,11 @@ async function pageAccounts(view) {
           h('div', { class: 'acct-when' }, a.last_sync ? `עדכון אחרון: ${new Date(a.last_sync).toLocaleString('he-IL')}` : ''),
           h('div', { class: 'acct-actions' },
             h('button', { class: 'btn sm primary', type: 'button', onclick: () => doSync(a.id) }, 'עדכן עכשיו'),
-            h('button', { class: 'btn sm', type: 'button', onclick: () => { const c = companies.find((x) => x.id === a.company); if (!c || c.needsSms) return toast('חשבון זה מעודכן דרך הטרמינל', true); credentialsDialog(a, c); } }, 'עדכון סיסמה'),
-            h('button', { class: 'btn sm danger', type: 'button', onclick: async () => { if (!confirm(`להסיר את "${a.label}"? העסקאות שכבר נטענו יישארו.`)) return; await api('DELETE', `/api/accounts/${a.id}`).catch((e) => toast(e.message, true)); await refreshStatus(); render(); } }, 'הסרה')));
+            isAdmin() && h('button', { class: 'btn sm', type: 'button', onclick: () => { const c = companies.find((x) => x.id === a.company); if (!c || c.needsSms) return toast('חשבון זה מעודכן דרך הטרמינל', true); credentialsDialog(a, c); } }, 'עדכון סיסמה'),
+            isAdmin() && h('button', { class: 'btn sm danger', type: 'button', onclick: async () => { if (!confirm(`להסיר את "${a.label}"? העסקאות שכבר נטענו יישארו.`)) return; await api('DELETE', `/api/accounts/${a.id}`).catch((e) => toast(e.message, true)); await refreshStatus(); render(); } }, 'הסרה')));
       })))));
   }
-  frag.append(h('div', { class: 'grid' }, addCardForm(st, companies)));
+  if (isAdmin()) frag.append(h('div', { class: 'grid' }, addCardForm(st, companies)));
   frag.append(h('div', { class: 'grid' }, importCard()));
   // יומן והגדרות מתקדמות
   const topic = h('input', { value: settings.ntfy_topic, placeholder: 'למשל: budget-x7k29q', dir: 'ltr' });
@@ -548,7 +551,7 @@ async function pageAccounts(view) {
   const test = h('button', { class: 'btn', type: 'button' }, 'שליחת הודעת בדיקה');
   test.addEventListener('click', busy(test, async () => { await api('POST', '/api/settings/test-notify'); toast('נשלחה'); }));
   frag.append(h('div', { class: 'grid g2' },
-    h('div', { class: 'card' }, h('details', {}, h('summary', {}, 'הגדרות מתקדמות'), h('div', { class: 'stack-gap', style: { marginTop: '12px' } },
+    isAdmin() && h('div', { class: 'card' }, h('details', {}, h('summary', {}, 'הגדרות מתקדמות'), h('div', { class: 'stack-gap', style: { marginTop: '12px' } },
       h('label', { class: 'field inline' }, auto, 'לעדכן עסקאות אוטומטית פעם ביום (כשהאפליקציה פתוחה)'), field('באיזו שעה בערך? (0-23)', hour),
       field('התראה לטלפון כשהעדכון נכשל (לא חובה)', topic, 'אפשר להתקין את האפליקציה ntfy בטלפון ולהירשם לאותו שם. ההודעה לא כוללת סכומים.'), field('כתובת שרת ntfy (לא חובה)', server), h('div', { class: 'actions' }, saveS, test)))),
     h('div', { class: 'card' }, h('details', {}, h('summary', {}, `יומן עדכונים (${log.length})`), log.length ? h('div', { class: 'table-wrap', style: { maxHeight: '320px', overflowY: 'auto' } }, h('table', {}, h('tbody', {}, log.map((l) => h('tr', {}, h('td', {}, new Date(l.started_at).toLocaleString('he-IL')), h('td', {}, l.account_label || ''),
@@ -579,7 +582,97 @@ async function pageYear(view) {
       card('החודשים במספרים', 'מהחדש לישן', active.length ? monthsTable(active) : h('div', { class: 'empty small' }, 'אין נתונים')),
       card('על מה הלך הכסף השנה?', 'הקטגוריות הגדולות', categoryBars(y.categories.map((c) => ({ ...c, budget: null, pct: null })), { onlyTop: 10, total: y.expense }))))); }
 
-const PAGES = { home: pageHome, recurring: pageRecurring, onetime: pageOneTime, transactions: pageTransactions, budget: pageBudget, year: pageYear, accounts: pageAccounts };
+// ---------- כניסה, משתמשים ומשפחה ----------
+function showLogin() {
+  document.body.classList.add('login-mode');
+  const user = h('input', { autocomplete: 'username', 'aria-label': 'שם משתמש', autofocus: true });
+  const pw = h('input', { type: 'password', autocomplete: 'current-password', 'aria-label': 'סיסמה' });
+  const btn = h('button', { class: 'btn primary big', type: 'button' }, 'כניסה');
+  const go = busy(btn, async () => { await api('POST', '/api/auth/login', { username: user.value, password: pw.value }); location.reload(); });
+  btn.addEventListener('click', go); pw.addEventListener('keydown', (e) => e.key === 'Enter' && go()); user.addEventListener('keydown', (e) => e.key === 'Enter' && pw.focus());
+  document.getElementById('view').replaceChildren(h('div', { class: 'login-wrap' }, h('div', { class: 'card login-card fade-in' },
+    h('div', { class: 'welcome-ic' }, icon('coin', 56)), h('h1', {}, 'תקציב המשפחה'), h('p', { class: 'sub' }, 'התחברו עם שם המשתמש והסיסמה האישיים שלכם'),
+    h('div', { class: 'stack-gap' }, field('שם משתמש', user), field('סיסמה', pw), btn),
+    h('p', { class: 'hint' }, 'שכחתם סיסמה? מנהל המשפחה יכול לאפס אותה.'))));
+  toast('נדרשת התחברות');
+}
+
+function renderUserChip() {
+  const btn = document.getElementById('user-btn');
+  if (!state.auth || !state.auth.user) { btn.hidden = true; return; }
+  btn.hidden = false;
+  btn.replaceChildren(h('span', { class: 'avatar' }, state.auth.user.displayName.slice(0, 1)), state.auth.user.displayName);
+  btn.onclick = () => {
+    const cur = h('input', { type: 'password', autocomplete: 'current-password' }), nxt = h('input', { type: 'password', autocomplete: 'new-password' });
+    modal(`שלום ${state.auth.user.displayName}`, h('div', { class: 'stack-gap' }, h('p', {}, `מחוברים כ-${state.auth.user.username} (${state.auth.user.role === 'admin' ? 'מנהל' : 'בן משפחה'})`),
+      h('h3', {}, 'שינוי סיסמה'), field('הסיסמה הנוכחית', cur), field('סיסמה חדשה (8 תווים לפחות)', nxt)),
+    (close) => {
+      const ok = h('button', { class: 'btn primary', type: 'button' }, 'שמירת סיסמה');
+      ok.addEventListener('click', busy(ok, async () => { await api('POST', '/api/auth/password', { current: cur.value, next: nxt.value }); toast('הסיסמה עודכנה'); close(); }));
+      return [ok, h('button', { class: 'btn danger', type: 'button', onclick: async () => { await api('POST', '/api/auth/logout'); location.reload(); } }, 'התנתקות'), h('button', { class: 'btn', type: 'button', onclick: close }, 'סגירה')];
+    });
+  };
+}
+
+async function pageFamily(view) {
+  if (!state.auth.usersExist) {
+    const f = { username: h('input', { autocomplete: 'username', placeholder: 'למשל: dana' }), name: h('input', { placeholder: 'למשל: דנה' }), pw: h('input', { type: 'password', autocomplete: 'new-password' }), pw2: h('input', { type: 'password', autocomplete: 'new-password' }) };
+    const go = h('button', { class: 'btn primary big', type: 'button' }, 'הפעלת כניסה אישית');
+    go.addEventListener('click', busy(go, async () => {
+      if (f.pw.value !== f.pw2.value) throw new Error('הסיסמאות לא זהות');
+      await api('POST', '/api/auth/setup', { username: f.username.value, displayName: f.name.value, password: f.pw.value });
+      location.hash = '#/family'; location.reload();
+    }));
+    view.replaceChildren(h('div', { class: 'fade-in' }, pageHead('משפחה', 'כל בן משפחה נכנס עם שם משתמש וסיסמה משלו, וכולם רואים את אותם כרטיסים ואותם נתונים.'),
+      h('div', { class: 'grid g-main' },
+        card('איך זה עובד', null, h('ol', { class: 'steps' },
+          h('li', {}, h('span', {}, h('b', {}, 'יוצרים משתמש מנהל'), ' (אתם). המנהל מוסיף כרטיסים ומנהל את בני המשפחה.')),
+          h('li', {}, h('span', {}, h('b', {}, 'מוסיפים בני משפחה'), ', לכל אחד שם משתמש וסיסמה, והם רואים את אותם כרטיסים.')),
+          h('li', {}, h('span', {}, h('b', {}, 'מפעילים גישה מהרשת הביתית'), ' כדי שהם יוכלו להיכנס מהמחשב או מהטלפון שלהם בבית.'))),
+          h('p', { class: 'hint' }, 'הכול נשאר בבית: אין ענן ואין כניסה עם גוגל. אחרי ההפעלה גם במחשב הזה צריך להתחבר.')),
+        card('יצירת המנהל הראשון', 'זה המשתמש שלכם', h('div', { class: 'stack-gap' }, field('השם שיוצג', f.name), field('שם משתמש (באנגלית או בעברית, בלי רווחים)', f.username), field('סיסמה (8 תווים לפחות)', f.pw), field('הקלידו שוב', f.pw2), go)))));
+    return;
+  }
+  if (!isAdmin()) { view.replaceChildren(card('אין הרשאה', 'העמוד הזה שמור למנהל המשפחה.')); return; }
+  const [users, lan] = await Promise.all([api('GET', '/api/users'), api('GET', '/api/lan')]);
+  const rows = users.map((u) => h('tr', {}, h('td', {}, h('b', {}, u.displayName), h('div', { class: 'muted' }, u.username)), h('td', {}, h('span', { class: 'chip' }, u.role === 'admin' ? 'מנהל' : 'בן משפחה')),
+    h('td', {}, u.lastLogin ? new Date(u.lastLogin.replace(' ', 'T') + 'Z').toLocaleString('he-IL') : 'עוד לא התחבר'),
+    h('td', {}, h('div', { class: 'row-gap' }, h('button', { class: 'btn sm', type: 'button', onclick: () => resetPwDialog(u) }, 'איפוס סיסמה'),
+      u.id !== state.auth.user.id ? h('button', { class: 'btn sm danger', type: 'button', onclick: async () => { if (!confirm(`להסיר את ${u.displayName}? הנתונים המשותפים יישארו.`)) return; await api('DELETE', `/api/users/${u.id}`).catch((e) => toast(e.message, true)); render(); } }, 'הסרה') : h('span', { class: 'chip good' }, 'אתם')))));
+  const nm = h('input', { placeholder: 'למשל: יוסי' }), un = h('input', { placeholder: 'למשל: yossi', autocomplete: 'off' }), pw = h('input', { type: 'password', autocomplete: 'new-password' });
+  const role = h('select', {}, h('option', { value: 'member' }, 'בן משפחה (רואה ומתקן נתונים)'), h('option', { value: 'admin' }, 'מנהל (גם מנהל כרטיסים ומשתמשים)'));
+  const add = h('button', { class: 'btn primary', type: 'button' }, icon('plus', 16), 'הוספת בן משפחה');
+  add.addEventListener('click', busy(add, async () => { await api('POST', '/api/users', { displayName: nm.value, username: un.value, password: pw.value, role: role.value }); toast('נוסף. תנו לו את שם המשתמש והסיסמה'); render(); }));
+  const toggle = h('button', { class: 'btn ' + (lan.enabled ? 'danger' : 'primary'), type: 'button' }, lan.enabled ? 'כיבוי הגישה מהרשת הביתית' : 'הפעלת גישה מהרשת הביתית');
+  toggle.addEventListener('click', busy(toggle, async () => { await api('PUT', '/api/lan', { enabled: !lan.enabled }); toast(lan.enabled ? 'הגישה כובתה' : 'הגישה מהרשת הביתית הופעלה'); render(); }));
+  const urls = (lan.urls || []).map((u) => h('div', { class: 'url-row' }, h('code', { dir: 'ltr' }, u), h('button', { class: 'btn sm', type: 'button', onclick: () => navigator.clipboard?.writeText(u).then(() => toast('הועתק')) }, 'העתקה')));
+  view.replaceChildren(h('div', { class: 'fade-in' }, pageHead('משפחה', 'מי יכול להיכנס, ואיך נכנסים מהרשת הביתית'),
+    h('div', { class: 'grid' }, card(`בני המשפחה (${users.length})`, 'כולם רואים את אותם כרטיסים ונתונים. רק מנהל מוסיף כרטיסים ומנהל משתמשים.', h('div', { class: 'table-wrap' }, h('table', {}, h('thead', {}, h('tr', {}, ['שם', 'תפקיד', 'כניסה אחרונה', ''].map((t) => h('th', {}, t)))), h('tbody', {}, rows))))),
+    h('div', { class: 'grid' }, card('הוספת בן משפחה', 'אחרי ההוספה אפשר לשנות את הסיסמה בעצמו (לחיצה על השם שלו למעלה).', h('div', { class: 'form-grid' }, field('שם שיוצג', nm), field('שם משתמש', un), field('סיסמה זמנית (8 תווים לפחות)', pw), field('תפקיד', role)), h('div', { class: 'actions' }, add))),
+    h('div', { class: 'grid' }, card('כניסה מהמחשבים והטלפונים של המשפחה בבית', lan.enabled ? 'הגישה פעילה' : 'כרגע האפליקציה נגישה רק מהמחשב הזה',
+      h('div', { class: 'stack-gap' },
+        lan.enabled ? h('div', {}, h('p', {}, 'בני המשפחה פותחים בדפדפן (באותו Wi-Fi) את אחת הכתובות האלה ומתחברים עם השם והסיסמה שלהם:'), ...urls) : h('p', {}, 'כשמפעילים, האפליקציה נפתחת לכל מי שמחובר לרשת הביתית ויודע שם משתמש וסיסמה. מבחוץ, מהאינטרנט, אי אפשר להגיע אליה.'),
+        h('div', { class: 'actions' }, toggle),
+        h('details', {}, h('summary', {}, 'חשוב לדעת'), h('ul', { class: 'plain-list' },
+          h('li', {}, 'המחשב הזה צריך להיות דלוק והאפליקציה פתוחה כדי שאחרים יוכלו להיכנס.'),
+          h('li', {}, 'Windows עשוי לשאול על חומת אש. אשרו רק "רשתות פרטיות" ולא "ציבוריות".'),
+          h('li', {}, 'האפליקציה דוחה כל חיבור שלא מגיע מהרשת הביתית, ונועלת משתמש שמנחש סיסמה.'),
+          h('li', {}, 'החיבור בתוך הבית אינו מוצפן (http). אל תפעילו את זה ברשת Wi-Fi ציבורית.'),
+          h('li', {}, 'כל בן משפחה שנכנס רואה את כל העסקאות והכרטיסים. פרטי הכניסה לבנק לעולם לא מוצגים לאף אחד.'))))))));
+}
+
+function resetPwDialog(u) {
+  const pw = h('input', { type: 'password', autocomplete: 'new-password' });
+  modal(`איפוס סיסמה: ${u.displayName}`, h('div', { class: 'stack-gap' }, h('p', {}, 'הסיסמה החדשה תנתק את המשתמש מכל המכשירים.'), field('סיסמה חדשה (8 תווים לפחות)', pw)),
+    (close) => {
+      const ok = h('button', { class: 'btn primary', type: 'button' }, 'שמירה');
+      ok.addEventListener('click', busy(ok, async () => { await api('PUT', `/api/users/${u.id}/password`, { password: pw.value }); toast('הסיסמה אופסה'); close(); }));
+      return [ok, h('button', { class: 'btn', type: 'button', onclick: close }, 'ביטול')];
+    });
+}
+
+
+const PAGES = { home: pageHome, recurring: pageRecurring, onetime: pageOneTime, transactions: pageTransactions, budget: pageBudget, year: pageYear, family: pageFamily, accounts: pageAccounts };
 
 // ---------- אתחול ----------
 (async function init() {
@@ -587,7 +680,6 @@ const PAGES = { home: pageHome, recurring: pageRecurring, onetime: pageOneTime, 
   document.getElementById('m-prev').append(icon('prev', 18));
   document.getElementById('m-next').append(icon('next', 18));
   document.getElementById('theme-btn').append(icon('moon', 18));
-  document.getElementById('tabs').append(...ROUTES.map(([id, label, ic]) => h('a', { href: `#/${id}`, 'data-route': id }, icon(ic, 18), label)));
   document.getElementById('m-prev').addEventListener('click', () => setMonth(addMonths(state.month, -1)));
   document.getElementById('m-next').addEventListener('click', () => setMonth(addMonths(state.month, 1)));
   document.getElementById('sync-btn').addEventListener('click', () => doSync());
@@ -598,6 +690,10 @@ const PAGES = { home: pageHome, recurring: pageRecurring, onetime: pageOneTime, 
     safeStore('theme', next || 'auto'); toast(next === 'dark' ? 'מצב כהה' : next === 'light' ? 'מצב בהיר' : 'מצב אוטומטי');
   });
   window.addEventListener('hashchange', render);
+  try { state.auth = await api('GET', '/api/auth/state'); } catch (e) { document.getElementById('view').replaceChildren(h('div', { class: 'card empty' }, h('h3', {}, 'לא ניתן להתחבר לשרת'), e.message)); return; }
+  if (state.auth.usersExist && !state.auth.user) { showLogin(); return; }
+  renderUserChip();
+  document.getElementById('tabs').append(...ROUTES.filter(([id]) => id !== 'family' || isAdmin()).map(([id, label, ic]) => h('a', { href: `#/${id}`, 'data-route': id }, icon(ic, 18), label)));
   try {
     state.cats = await api('GET', '/api/categories');
     await loadMonths(); await refreshAccounts(); await refreshStatus();

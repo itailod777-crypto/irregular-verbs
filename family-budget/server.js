@@ -5,6 +5,7 @@ const { Vault } = require('./src/crypto');
 const { findMasterPassword } = require('./src/masterpw');
 const { createApp } = require('./src/app');
 const { runSync } = require('./src/sync');
+const { createLan } = require('./src/lan');
 
 const db = openDb(DB_FILE);
 const vault = new Vault(VAULT_FILE);
@@ -17,10 +18,16 @@ if (vault.exists()) {
   } catch (e) { console.error('פתיחת הכספת נכשלה:', e.message); }
 }
 
-const app = createApp({ db, vault, port: PORT });
+let app;
+const lan = { get: () => realLan.get(), set: (on) => realLan.set(on) };
+app = createApp({ db, vault, port: PORT, lan });
+const realLan = createLan({ app, port: PORT, onChange: (on) => setSetting(db, 'lan_enabled', on ? '1' : '0') });
 const server = app.listen(PORT, HOST, () => {
   console.log(`Family Budget פועל על http://${HOST}:${PORT} (מקומי בלבד)`);
 });
+if (getSetting(db, 'lan_enabled', '0') === '1' && db.prepare('SELECT COUNT(*) c FROM users').get().c > 0) {
+  lan.set(true).then(() => console.log('גישה מהרשת הביתית פעילה:', lan.get().urls.join(', '))).catch((e) => console.error('הפעלת הגישה מהרשת הביתית נכשלה:', e.message));
+}
 server.on('error', (e) => { console.error(e.code === 'EADDRINUSE' ? `הפורט ${PORT} תפוס. הגדר PORT אחר.` : e.message); process.exit(1); });
 
 // משיכה יומית אוטומטית בזמן שהאפליקציה פתוחה: רק אם יש חשבונות, הכספת פתוחה והשעה הגיעה.

@@ -31,6 +31,7 @@ async function api(method, url, body, headers) {
   });
   let data = null;
   try { data = await res.json(); } catch { /* ignore */ }
+  if (res.status === 401 && !url.startsWith('/api/auth/')) { location.reload(); throw new Error('נדרשת התחברות'); }
   if (!res.ok) throw new Error((data && data.error) || `שגיאה ${res.status}`);
   return data;
 }

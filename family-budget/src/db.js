@@ -36,6 +36,10 @@ CREATE TABLE IF NOT EXISTS sync_log (
   status TEXT NOT NULL, added INTEGER NOT NULL DEFAULT 0, duplicates INTEGER NOT NULL DEFAULT 0,
   pending_skipped INTEGER NOT NULL DEFAULT 0, error TEXT);
 CREATE TABLE IF NOT EXISTS recurring_overrides (key TEXT PRIMARY KEY, recurring INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY, username TEXT UNIQUE NOT NULL, display_name TEXT NOT NULL, password_hash TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('admin','member')), last_login TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')));
+CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 `;
 
@@ -43,6 +47,7 @@ function openDb(file) {
   const db = new DatabaseSync(file);
   db.exec('PRAGMA foreign_keys = ON; PRAGMA journal_mode = DELETE; PRAGMA busy_timeout = 5000;');
   db.exec(SCHEMA);
+  if (!db.prepare('PRAGMA table_info(transactions)').all().some((c) => c.name === 'created_by')) db.exec('ALTER TABLE transactions ADD COLUMN created_by INTEGER');
   seed(db);
   return db;
 }

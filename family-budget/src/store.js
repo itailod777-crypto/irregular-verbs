@@ -54,7 +54,7 @@ function previewDuplicates(db, rows) {
   return { new: fresh, duplicates: dup, invalid: rows.length - clean.length };
 }
 
-function addManual(db, { date, amount, description, categoryId, type }) {
+function addManual(db, { date, amount, description, categoryId, type, createdBy = null }) {
   let amt = Math.abs(Number(amount));
   if (!Number.isFinite(amt) || amt === 0) throw new Error('סכום לא תקין');
   if (!DATE_RE.test(date)) throw new Error('תאריך לא תקין');
@@ -62,8 +62,8 @@ function addManual(db, { date, amount, description, categoryId, type }) {
   const signed = type === 'income' ? amt : -amt;
   const cat = categoryId || (signed > 0 ? fallbacks(db).income : fallbacks(db).expense);
   const hash = 'manual:' + crypto.randomUUID();
-  const r = db.prepare(`INSERT INTO transactions (hash,date,amount,description,norm,category_id,manual_category,source)
-    VALUES (?,?,?,?,?,?,1,'manual')`).run(hash, date, signed, String(description).trim(), normalize(description), cat);
+  const r = db.prepare(`INSERT INTO transactions (hash,date,amount,description,norm,category_id,manual_category,source,created_by)
+    VALUES (?,?,?,?,?,?,1,'manual',?)`).run(hash, date, signed, String(description).trim(), normalize(description), cat, createdBy);
   return Number(r.lastInsertRowid);
 }
 
@@ -297,8 +297,8 @@ function listTransactions(db, { month, q, categoryId, accountId, type, limit = 2
   const w = where.join(' AND ');
   const total = db.prepare(`SELECT COUNT(*) c FROM transactions t WHERE ${w}`).get(...args).c;
   const items = db.prepare(`SELECT t.id,t.date,t.amount,t.description,t.memo,t.category_id,t.manual_category,t.ignored,t.source,t.account_id,
-      c.name category, c.color color, c.kind kind
-    FROM transactions t JOIN categories c ON c.id=t.category_id WHERE ${w}
+      c.name category, c.color color, c.kind kind, u.display_name created_by_name
+    FROM transactions t JOIN categories c ON c.id=t.category_id LEFT JOIN users u ON u.id=t.created_by WHERE ${w}
     ORDER BY t.date DESC, t.id DESC LIMIT ? OFFSET ?`).all(...args, Math.min(Number(limit) || 200, 1000), Number(offset) || 0);
   return { total, items };
 }

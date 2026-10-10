@@ -19,13 +19,20 @@ async function startApp({ createScraperImpl } = {}) {
   const app = createApp({ db, vault, port, createScraperImpl });
   const server = await new Promise((r) => { const s = app.listen(port, '127.0.0.1', () => r(s)); });
   const base = `http://127.0.0.1:${port}`;
-  const call = async (method, url, body, headers = {}) => {
-    const isBuf = Buffer.isBuffer(body);
-    const res = await fetch(base + url, { method, headers: { 'X-Requested-With': 'budget', ...(body && !isBuf ? { 'Content-Type': 'application/json' } : {}), ...headers },
-      body: body === undefined ? undefined : isBuf ? body : JSON.stringify(body) });
-    return { status: res.status, json: await res.json().catch(() => null), headers: res.headers };
+  const client = () => {
+    let cookie = '';
+    const fn = async (method, url, body, headers = {}) => {
+      const isBuf = Buffer.isBuffer(body);
+      const res = await fetch(base + url, { method, headers: { 'X-Requested-With': 'budget', ...(cookie ? { Cookie: cookie } : {}), ...(body && !isBuf ? { 'Content-Type': 'application/json' } : {}), ...headers },
+        body: body === undefined ? undefined : isBuf ? body : JSON.stringify(body) });
+      const sc = res.headers.get('set-cookie');
+      if (sc) cookie = sc.split(';')[0].endsWith('=') ? '' : sc.split(';')[0];
+      return { status: res.status, json: await res.json().catch(() => null), headers: res.headers };
+    };
+    return fn;
   };
-  return { db, vault, app, server, base, dir, call, close: () => server.close() };
+  const call = client();
+  return { db, vault, app, server, base, dir, call, client, port, close: () => server.close() };
 }
 const catId = (db, name) => db.prepare('SELECT id FROM categories WHERE name=?').get(name).id;
 module.exports = { startApp, catId };
