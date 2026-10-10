@@ -56,13 +56,6 @@ async function typeInto(page, sel, value) {
   for (let attempt = 0; attempt < 4; attempt++) {
     await page.click(sel, { clickCount: 3 });
     await page.keyboard.press('Backspace');
-    if (attempt === 0 || attempt === 2) {
-      // הדבקה כטקסט אחד (כמו הדבקה אמיתית): אירוע input אחד במקום הקשה תו-תו שהדף של ישראכרט מפספס
-      await page.evaluate((q, v) => { const e = document.querySelector(q); e.focus(); e.select(); document.execCommand('insertText', false, v); }, sel, want).catch(() => {});
-      await new Promise((r) => setTimeout(r, 300));
-      if ((await readValue(page, sel)) === want) return true;
-      continue;
-    }
     for (const ch of want) {
       if (!(await page.$(sel))) break;
       await page.type(sel, ch, { delay: 30 });
@@ -126,12 +119,15 @@ class PatchedIsracardScraper extends IsracardScraper {
     await typeInto(page, '[data-fb="pass"]', credentials.password);
     if ((await readValue(page, '[data-fb="pass"]')) !== String(credentials.password)) throw new Error(`Isracard: password field did not keep its value ${JSON.stringify(await formReport(page))}`);
     const before = await formReport(page);
-    await page.$eval('[data-fb="submit"]', (b) => { b.removeAttribute('disabled'); b.removeAttribute('aria-disabled'); b.classList.remove('disabled'); });
+    await new Promise((r) => setTimeout(r, 600));
     this.lastReport = before;
     const seen = [];
     page.on('response', (res) => { try { const u = new URL(res.url()); if (/isracard/i.test(u.host) && /logon|login|valid|otp|captcha/i.test(u.pathname + u.search)) seen.push(`${res.status()} ${u.pathname}${(u.search.match(/reqName=\w+/) || [''])[0] ? '?' + u.search.match(/reqName=\w+/)[0] : ''}`); } catch {} });
     this.seen = seen;
     await page.click('[data-fb="submit"]');
+    // אם הלחיצה לא יצרה שום בקשה לשרת (הדף חסם בעצמו), מנסים פעם אחת Enter בשדה הסיסמה, כמו משתמש
+    await new Promise((r) => setTimeout(r, 3000));
+    if (!seen.length && /personalarea\/Login/i.test(page.url())) { await page.focus('[data-fb="pass"]').catch(() => {}); await page.keyboard.press('Enter'); }
     await page.waitForFunction((src) => !/personalarea\/Login/i.test(location.href) || new RegExp(src).test(document.body.innerText), { timeout: 45000 }, ERROR_RE.source).catch(() => {});
     if (!/personalarea\/Login/i.test(page.url())) {
       // אחרי הכניסה האתר עוד מנווט כמה פעמים; קריאות הנתונים רצות בתוך הדף ונופלות אם הוא באמצע מעבר
