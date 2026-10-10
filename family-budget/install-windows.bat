@@ -2,7 +2,7 @@
 cd /d "%~dp0"
 if not exist node_modules (
   echo Installing dependencies - this takes a few minutes...
-  call npm install
+  call npm install --omit=dev --no-audit --no-fund
 )
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\install-shortcuts.ps1"
 echo.

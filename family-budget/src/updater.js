@@ -16,7 +16,7 @@ function runShell(cmd, cwd, timeout = 600000) {
   return new Promise((resolve, reject) => exec(cmd, { cwd, timeout, windowsHide: true }, (err, stdout, stderr) => (err ? reject(new Error(String(stderr || err.message).trim().slice(0, 400))) : resolve(String(stdout)))));
 }
 
-function createUpdater({ dir = path.join(__dirname, '..'), git = (args) => run('git', args, dir), npmInstall = () => runShell('npm install --no-audit --no-fund', dir), restart = () => {} } = {}) {
+function createUpdater({ dir = path.join(__dirname, '..'), git = (args) => run('git', args, dir), npmInstall = () => runShell('npm install --omit=dev --no-audit --no-fund', dir), restart = () => {} } = {}) {
   let busy = false;
   const info = async () => {
     let current, branch;

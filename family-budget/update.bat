@@ -22,7 +22,7 @@ cd /d "%~dp0"
     pause
     exit /b 1
   )
-  call npm install
+  call npm install --omit=dev --no-audit --no-fund
   powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\install-shortcuts.ps1" >nul 2>nul
   wscript "%~dp0app.vbs" hidden
   echo.
