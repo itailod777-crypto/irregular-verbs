@@ -9,7 +9,7 @@ echo. >> "%OUT%"
 echo Collecting information, please wait...
 echo --- tools --- >> "%OUT%"
 node -v >> "%OUT%" 2>&1
-npm -v >> "%OUT%" 2>&1
+call npm -v >> "%OUT%" 2>&1
 git --version >> "%OUT%" 2>&1
 if not exist "%APP%\server.js" (
   echo APP FOLDER OR server.js NOT FOUND: %APP% >> "%OUT%"
