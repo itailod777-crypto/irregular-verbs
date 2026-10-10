@@ -334,3 +334,15 @@ test('יעד חיסכון, תובנות (מפת חום/ימי שבוע/שינו�
   assert.ok(csv.includes('"\'=HYPERLINK'), 'נוסחאות מנוטרלות');
   assert.ok(csv.split('\r\n').length > 20);
 });
+
+test('מציאת דפדפן לסריקה: סביבה, מצורף, ואז Chrome/Edge מותקנים', () => {
+  const { findBrowser } = require('../src/sync');
+  const only = (...paths) => (p) => paths.includes(p);
+  const chrome = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', edge = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
+  const env = { ProgramFiles: 'C:\\Program Files', 'ProgramFiles(x86)': 'C:\\Program Files (x86)', LOCALAPPDATA: 'C:\\Users\\x\\AppData\\Local' };
+  assert.equal(findBrowser({ env: { ...env, PUPPETEER_EXECUTABLE_PATH: '/custom/chrome' }, exists: only('/custom/chrome', chrome), bundled: '/b' }), '/custom/chrome');
+  assert.equal(findBrowser({ env, exists: only('/bundled/chrome', chrome), bundled: '/bundled/chrome' }), '/bundled/chrome');
+  assert.equal(findBrowser({ env, exists: only(chrome, edge), bundled: '/missing' }), chrome, 'Chrome לפני Edge');
+  assert.equal(findBrowser({ env, exists: only(edge), bundled: '/missing' }), edge, 'Edge הוא תמיד ב-Windows');
+  assert.equal(findBrowser({ env, exists: () => false, bundled: '/missing' }), null);
+});

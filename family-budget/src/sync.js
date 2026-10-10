@@ -3,6 +3,23 @@
 const { getSetting, setSetting } = require('./db');
 const { addTransactions } = require('./store');
 const { notifyFailure } = require('./notify');
+const fs = require('fs');
+
+// מציאת דפדפן להרצת הסריקה: משתנה סביבה, אחר כך הדפדפן שהספרייה הורידה, ואחר כך Chrome / Edge שכבר מותקנים במחשב
+function browserCandidates(env = process.env) {
+  const pf = env.ProgramFiles || 'C:\\Program Files', pf86 = env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', local = env.LOCALAPPDATA || '';
+  return [
+    `${pf}\\Google\\Chrome\\Application\\chrome.exe`, `${pf86}\\Google\\Chrome\\Application\\chrome.exe`, local && `${local}\\Google\\Chrome\\Application\\chrome.exe`,
+    `${pf86}\\Microsoft\\Edge\\Application\\msedge.exe`, `${pf}\\Microsoft\\Edge\\Application\\msedge.exe`,
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+    '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/microsoft-edge',
+  ].filter(Boolean);
+}
+function findBrowser({ env = process.env, exists = fs.existsSync, bundled } = {}) {
+  if (env.PUPPETEER_EXECUTABLE_PATH && exists(env.PUPPETEER_EXECUTABLE_PATH)) return env.PUPPETEER_EXECUTABLE_PATH;
+  try { const b = bundled === undefined ? require('puppeteer').executablePath() : bundled; if (b && exists(b)) return b; } catch { /* אין דפדפן מצורף */ }
+  return browserCandidates(env).find((c) => exists(c)) || null;
+}
 
 const TZ_FMT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit' });
 // הספרייה מחזירה חצות ישראל כ-ISO ב-UTC (ליום הקודם). ממירים לתאריך ישראלי.
@@ -67,8 +84,9 @@ async function syncAccount({ db, vault, account, createScraperImpl, now = new Da
     const start = account.last_sync
       ? new Date(new Date(account.last_sync).getTime() - 14 * 86400000) // חפיפה של שבועיים; הכפילויות מסוננות
       : new Date(now.getFullYear(), now.getMonth() - initialMonths, now.getDate());
+    const executablePath = findBrowser();
     const scraper = createScraperImpl({
-      companyId: account.company, startDate: start, combineInstallments: false, showBrowser: false,
+      ...(executablePath ? { executablePath } : {}), companyId: account.company, startDate: start, combineInstallments: false, showBrowser: false,
       verbose: false, navigationRetryCount: 1,
     });
     const { otpLongTermToken, ...rest } = creds;
@@ -106,4 +124,4 @@ async function runSync({ db, vault, accountId = null, createScraperImpl, now }) 
   return results;
 }
 
-module.exports = { runSync, mapTransactions, israelDate, redact };
+module.exports = { runSync, mapTransactions, israelDate, redact, findBrowser, browserCandidates };

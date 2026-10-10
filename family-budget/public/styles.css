@@ -364,3 +364,6 @@ body.login-mode .topbar { display: none; }
 .url-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 8px 0; padding: 10px 14px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border); }
 .url-row code { font-size: 1.05rem; font-weight: 700; flex: 1; }
 .plain-list { margin: 8px 0 0; padding-inline-start: 20px; display: grid; gap: 6px; color: var(--ink-2); }
+
+/* אלמנט עם hidden תמיד מוסתר, גם אם יש לו display בעיצוב */
+[hidden] { display: none !important; }

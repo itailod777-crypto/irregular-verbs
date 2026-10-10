@@ -63,7 +63,7 @@ function friendlyError(m = '') {
   if (/CHANGE_PASSWORD/.test(m)) return 'האתר מבקש להחליף סיסמה. היכנסו לאתר, החליפו סיסמה, ואז עדכנו אותה כאן.';
   if (/ACCOUNT_BLOCKED/.test(m)) return 'החשבון ננעל. צריך לפנות לחברה כדי לשחרר אותו.';
   if (/TIMEOUT|timed? ?out|Navigation/i.test(m)) return 'האתר לא הגיב בזמן. נסו שוב בעוד כמה דקות.';
-  if (/Chrome|browser|puppeteer/i.test(m)) return 'חסר רכיב דפדפן שהאפליקציה צריכה כדי להיכנס לאתר. הריצו שוב את install-windows.bat.';
+  if (/Chrome|browser|puppeteer/i.test(m)) return 'לא נמצא Chrome או Edge במחשב. התקינו אחד מהם ונסו שוב.';
   if (/לא נמצאו פרטי כניסה/.test(m)) return 'חסרים פרטי כניסה. לחצו על "עדכון סיסמה" בכרטיס.';
   return 'משהו השתבש באתר. אפשר לנסות שוב מאוחר יותר.';
 }
