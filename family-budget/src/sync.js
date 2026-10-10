@@ -127,7 +127,8 @@ async function runSync({ db, vault, accountId = null, createScraperImpl, launchB
     launchBrowser = launchBrowser || launchOwnBrowser;
     const { createScraper } = require('israeli-bank-scrapers');
     // מקס: כניסה מותאמת לדף החדש שלהם (ראו src/max-login.js). שאר החברות: הספרייה כמות שהיא.
-    createScraperImpl = (opts) => (opts.companyId === 'max' ? new (require('./max-login').PatchedMaxScraper)(opts) : createScraper(opts));
+    createScraperImpl = (opts) => (opts.companyId === 'max' ? new (require('./max-login').PatchedMaxScraper)(opts)
+      : opts.companyId === 'isracard' ? new (require('./isracard-login').PatchedIsracardScraper)(opts) : createScraper(opts));
   }
   if (!vault.isUnlocked()) throw new Error('הכספת נעולה. הזן סיסמת-על.');
   if (!acquireLock(db)) throw new Error('משיכה אחרת כבר רצה כרגע.');
