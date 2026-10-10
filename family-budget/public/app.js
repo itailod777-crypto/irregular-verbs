@@ -445,9 +445,18 @@ async function pageBudget(view) {
 // ---------- כרטיסים וחשבונות ----------
 const POPULAR = ['visaCal', 'isracard', 'max', 'amex', 'leumi', 'hapoalim', 'discount', 'mizrahi'];
 
+
+// שדה פרטי כניסה: שם משתמש ותעודת זהות מוצגים כטקסט רגיל (כדי לראות שלא התבלבלתם), ורק סיסמה מוסתרת, עם כפתור "הצג"
+function credField(f) {
+  const input = h('input', { type: f.secret ? 'password' : 'text', autocomplete: 'off', spellcheck: false, 'aria-label': f.label, dir: 'ltr', class: 'cred-input' });
+  if (!f.secret) return { input, node: field(f.label, input) };
+  const eye = h('button', { class: 'btn sm ghost', type: 'button', onclick: () => { const show = input.type === 'password'; input.type = show ? 'text' : 'password'; eye.textContent = show ? 'הסתר' : 'הצג'; } }, 'הצג');
+  return { input, node: field(f.label, h('div', { class: 'pw-wrap' }, input, eye)) };
+}
+
 function credentialsDialog(a, company) {
   const inputs = {};
-  const fields = company.fields.map((f) => { inputs[f.key] = h('input', { type: 'password', autocomplete: 'off', 'aria-label': f.label }); return field(f.label, inputs[f.key]); });
+  const fields = company.fields.map((f) => { const c = credField(f); inputs[f.key] = c.input; return c.node; });
   modal(`עדכון פרטי כניסה: ${a.label}`, h('div', { class: 'stack-gap' }, h('p', {}, 'זה נחוץ כשהסיסמה באתר הבנק או הכרטיס השתנתה. הפרטים נשמרים מוצפנים ולא יוצאים מהמחשב.'), ...fields),
     (close) => {
       const ok = h('button', { class: 'btn primary', type: 'button' }, 'שמירה');
@@ -474,7 +483,7 @@ function addCardForm(st, companies) {
     fieldsBox.replaceChildren(); submit.hidden = true;
     if (!cur) return;
     if (cur.needsSms) { fieldsBox.append(h('p', { class: 'hint' }, 'חשבון זה דורש קוד SMS ולכן מוסיפים אותו דרך הטרמינל: npm run set-credentials. אפשר בינתיים להעלות קובץ למטה.')); return; }
-    for (const f of cur.fields) { inputs[f.key] = h('input', { type: 'password', autocomplete: 'off', 'aria-label': f.label }); fieldsBox.append(field(f.label, inputs[f.key])); }
+    for (const f of cur.fields) { const c = credField(f); inputs[f.key] = c.input; fieldsBox.append(c.node); }
     if (!nameIn.value) nameIn.value = cur.name;
     submit.hidden = false;
   };

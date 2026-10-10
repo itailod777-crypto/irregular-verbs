@@ -374,3 +374,7 @@ details.tech pre { white-space: pre-wrap; word-break: break-word; user-select: a
 
 .update-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.55); display: grid; place-items: center; padding: 20px; }
 .update-overlay .card { max-width: 420px; text-align: center; display: grid; gap: 8px; justify-items: center; }
+
+.pw-wrap { display: flex; gap: 8px; align-items: center; }
+.pw-wrap input { flex: 1; }
+.cred-input { text-align: left; }
