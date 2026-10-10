@@ -41,4 +41,13 @@ tasklist | findstr /i "node" >> "%OUT%" 2>&1
 :done
 echo. >> "%OUT%"
 echo End of report. >> "%OUT%"
-start notepad "%OUT%"
+echo.
+echo ================= REPORT =================
+type "%OUT%"
+echo ==========================================
+echo.
+echo Report also saved on your Desktop: family-budget-report.txt
+start "" notepad "%OUT%"
+echo.
+echo Take a screenshot of this window and send it. Press any key to close.
+pause >nul
