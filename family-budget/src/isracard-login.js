@@ -81,9 +81,23 @@ class PatchedIsracardScraper extends IsracardScraper {
     const r = await tagLoginFields(page);
     if (!r.ok) throw new Error(`Isracard login form not recognized (${r.reason})`);
     if (!/^\d{6}$/.test(String(credentials.card6Digits || ''))) throw new Error('Isracard: card6Digits must be exactly 6 digits (check the saved details)');
-    for (const [sel, v] of [['id', credentials.id], ['card', credentials.card6Digits], ['pass', credentials.password]]) {
-      if (!(await typeInto(page, `[data-fb="${sel}"]`, v))) throw new Error(`Isracard: could not fill field "${sel}"`);
+    const wanted = [['id', credentials.id], ['card', credentials.card6Digits], ['pass', credentials.password]];
+    const settle = async () => { await page.waitForNetworkIdle({ idleTime: 1000, timeout: 8000 }).catch(() => {}); await new Promise((r) => setTimeout(r, 1200)); };
+    // הדף מאמת ת.ז.+כרטיס מול השרת ומרנדר מחדש את הטופס (ומרוקן את הסיסמה): ממלאים, ממתינים, ובודקים שהכל עדיין שם
+    for (let round = 0, stable = false; round < 4 && !stable; round++) {
+      stable = true;
+      for (const [sel, v] of wanted) {
+        const r = await tagLoginFields(page);
+        if (!r.ok) throw new Error(`Isracard login form lost (${r.reason})`);
+        if ((await readValue(page, `[data-fb="${sel}"]`)) !== String(v)) {
+          stable = false;
+          if (!(await typeInto(page, `[data-fb="${sel}"]`, v))) throw new Error(`Isracard: could not fill field "${sel}"`);
+          await settle();
+        }
+      }
     }
+    await tagLoginFields(page);
+    for (const [sel, v] of wanted) if ((await readValue(page, `[data-fb="${sel}"]`)) !== String(v)) throw new Error(`Isracard: field "${sel}" did not keep its value`);
     await page.click('[data-fb="submit"]');
     await page.waitForFunction((src) => !/personalarea\/Login/i.test(location.href) || new RegExp(src).test(document.body.innerText), { timeout: 45000 }, ERROR_RE.source).catch(() => {});
     if (!/personalarea\/Login/i.test(page.url())) {
