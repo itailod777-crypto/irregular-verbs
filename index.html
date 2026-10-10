@@ -848,6 +848,59 @@
   .dict-he-cue { margin: 2px 0 4px; font-size: 18px; font-weight: 600; color: var(--ink, var(--text)); letter-spacing: .01em; min-height: 1.3em; }
   .dict-he-cue b { font-weight: 800; color: var(--accent-ink); }
   .dict-he-cue.hidden { display: none; }
+
+  /* ---- v12: "previous word" review (view only) ---- */
+  .rev-prev { gap: 6px; }
+  .rev-prev .ico { color: var(--gold); }
+  .rev-prev:disabled { opacity: .38; cursor: not-allowed; }
+  .rev-prev:disabled .ico { color: inherit; }
+  .exam-actions .rev-prev { order: -1; }
+  .review-panel { position: relative; text-align: center; border: 1px solid var(--hair); animation: rvIn .28s cubic-bezier(.2,.8,.2,1); }
+  .review-panel::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; border-radius: inherit; background: linear-gradient(90deg, transparent, var(--gold), transparent); opacity: .7; }
+  @keyframes rvIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .review-panel { animation: none; } }
+  .rv-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .rv-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; color: var(--ink); background: color-mix(in srgb, var(--gold) 16%, transparent); border: 1px solid var(--hair); }
+  .rv-badge .ico { width: 16px; height: 16px; color: var(--gold); }
+  .rv-pos { font-size: 13.5px; color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .rv-q { margin: 4px 0 10px; }
+  .rv-cue { font-size: 12.5px; color: var(--muted); margin-bottom: 2px; }
+  .rv-word { display: block; font-size: 36px; font-weight: 700; color: var(--ink); letter-spacing: -.03em; line-height: 1.15; }
+  .rv-word-sm { font-size: 22px; letter-spacing: 0; }
+  .rv-sub { color: var(--muted); font-size: 15px; margin-top: 2px; }
+  .rv-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; font-weight: 700; font-size: 14px; margin-bottom: 12px; }
+  .rv-status.ok { background: var(--green-soft); color: var(--green-ink); }
+  .rv-status.bad { background: var(--red-soft); color: var(--red-ink); }
+  .rv-status .ico { width: 16px; height: 16px; }
+  .rv-options .opt { position: relative; cursor: default; animation: none; }
+  .rv-options .opt:hover { transform: none; box-shadow: none; }
+  .rv-you { display: block; font-size: 11px; font-weight: 700; letter-spacing: .02em; margin-top: 3px; opacity: .85; direction: rtl; }
+  .rv-block, .rv-correct { background: var(--surface-2); border: 1px solid var(--border); border-radius: 16px; padding: 10px 12px; margin-top: 10px; }
+  .rv-lbl { display: block; font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .03em; margin-bottom: 6px; }
+  .rv-typed { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .rv-ans { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 12px; font-weight: 700; font-size: 16px; border: 1px solid transparent; }
+  .rv-ans small { font-size: 10.5px; font-weight: 700; opacity: .7; letter-spacing: .04em; }
+  .rv-ans .ico { width: 15px; height: 15px; }
+  .rv-ans.ok { background: var(--green-soft); color: var(--green-ink); border-color: color-mix(in srgb, var(--green) 35%, transparent); }
+  .rv-ans.bad { background: var(--red-soft); color: var(--red-ink); border-color: color-mix(in srgb, var(--red) 35%, transparent); }
+  .rv-forms { font-size: 20px; font-weight: 700; color: var(--ink); }
+  .rv-pairs { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; text-align: start; }
+  .rv-pairs li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--border); }
+  .rv-pair-en { font-weight: 700; color: var(--ink); min-width: 92px; }
+  .rv-pair-he { flex: 1; color: var(--text); font-size: 14.5px; }
+  .rv-say { width: 34px; height: 34px; flex: none; }
+  .rv-say .ico { color: var(--gold); }
+  .rv-actions { margin-top: 14px; }
+  .rv-return { width: 100%; max-width: 360px; margin: 10px auto 0; display: flex; }
+  .rv-note { margin-top: 10px; font-size: 12px; color: var(--muted); }
+  html[data-theme="dark"] .rv-badge { color: var(--ink); }
+  @media (max-width: 420px) {
+    .exam-actions { gap: 8px; }
+    .exam-actions .btn.rev-prev { padding-inline: 12px; }
+    .rv-word { font-size: 30px; }
+    .rv-forms { font-size: 17px; }
+    .review-panel .exam-actions .btn { padding-inline: 13px; }
+  }
 </style>
 </head>
 <body>
@@ -870,6 +923,7 @@
       <li><b>בוחנים את עצמכם.</b> בחינה אמריקאית, בחינת תרגום, בחינת כתיבה ומשחק התאמה. אפשר לבחור חלק, קטגוריה או מילים קשות.</li>
       <li><b>הכתבה.</b> שומעים את הפועל באנגלית בלי לראות אותו, וכותבים את צורות ה-V2 וה-V3. אפשר להשמיע שוב, לאט יותר, או להציג את המילה כרמז.</li>
       <li><b>שליטה.</b> שומעים פועל וכותבים את שלוש הצורות. מילה נכונה נעלמת מהתור; טעות חוזרת עד שמצליחים בכל המילים בחלק. ההתקדמות נשמרת.</li>
+      <li><b>חוזרים אחורה.</b> בכל מצב יש כפתור «הקודם»: בבחינות הוא מציג את המילה הקודמת, מה עניתם והתשובה הנכונה, בלי לשנות את הציון. «חזרה למילה הנוכחית» מחזיר בדיוק לאן שהייתם.</li>
       <li><b>חוזרים על הקשות.</b> כל טעות נשמרת. כדאי לחזור עליהן מחר.</li>
     </ol>
     <h3>קיצורי מקלדת</h3>
@@ -880,6 +934,7 @@
       <li><kbd>K</kbd> יודע · <kbd>L</kbd> עדיין לומד</li>
       <li><kbd>1</kbd>–<kbd>4</kbd> בחירת תשובה</li>
       <li><kbd>Enter</kbd> בדיקה / הבא</li>
+      <li><kbd>PageUp</kbd> המילה הקודמת (צפייה) · <kbd>PageDown</kbd> קדימה · <kbd>Esc</kbd> חזרה למילה הנוכחית</li>
     </ul>
     <button id="helpOk" class="btn primary modal-ok">הבנתי, בואו נתחיל</button>
   </div>
@@ -1039,7 +1094,7 @@
       <div id="quizOptions" class="options" role="group" aria-label="תשובות אפשריות"></div>
       <div id="quizFeedback" class="feedback" aria-live="polite"></div>
       <div class="exam-actions">
-        <button id="quizBackBtn" class="btn ghost" disabled><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>לשאלה הקודמת</button>
+        <button id="quizBackBtn" class="btn ghost rev-prev" disabled aria-label="לשאלה הקודמת (צפייה בלבד)" title="לשאלה הקודמת (צפייה בלבד) · PageUp"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg><span>הקודם</span></button>
         <button id="quizSpeakBtn" class="btn green hidden" aria-label="השמע"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>השמע</button>
         <button id="quizNextBtn" class="btn accent hidden">הבא<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
       </div>
@@ -1052,6 +1107,7 @@
       <div class="exam-actions">
         <button id="quizRestartBtn" class="btn accent">🔄 התחל מחדש</button>
         <button id="quizRetryBtn" class="btn orange">🔁 תרגל רק את הטעויות</button>
+        <button id="quizEndBackBtn" class="btn ghost rev-prev rev-end hidden" aria-label="צפייה בשאלות שעניתם, מהאחרונה אחורה"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg><span>סקירת התשובות</span></button>
       </div>
     </div>
   </section>
@@ -1085,6 +1141,7 @@
       </div>
       <div id="dictFeedback" class="feedback" aria-live="polite"></div>
       <div class="exam-actions">
+        <button id="dictBackBtn" class="btn ghost rev-prev" disabled aria-label="למילה הקודמת (צפייה בלבד)" title="למילה הקודמת (צפייה בלבד) · PageUp"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg><span>הקודם</span></button>
         <button id="dictCheckBtn" class="btn accent">בדיקה (Enter)</button>
         <button id="dictSpeakAllBtn" class="btn green hidden" aria-label="השמע את שלוש הצורות"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>השמע את שלוש הצורות</button>
         <button id="dictNextBtn" class="btn accent hidden">הבא (Enter)<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
@@ -1098,6 +1155,7 @@
       <div class="exam-actions">
         <button id="dictRestartBtn" class="btn accent">התחל מחדש</button>
         <button id="dictRetryBtn" class="btn orange">תרגל רק את הטעויות</button>
+        <button id="dictEndBackBtn" class="btn ghost rev-prev rev-end hidden" aria-label="צפייה במילים שעניתם, מהאחרונה אחורה"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg><span>סקירת התשובות</span></button>
       </div>
     </div>
   </section>
@@ -1140,6 +1198,7 @@
       </div>
       <div id="masterFeedback" class="feedback" aria-live="polite"></div>
       <div class="exam-actions">
+        <button id="masterBackBtn" class="btn ghost rev-prev" disabled aria-label="לניסיון הקודם (צפייה בלבד)" title="לניסיון הקודם (צפייה בלבד) · PageUp"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg><span>הקודם</span></button>
         <button id="masterCheckBtn" class="btn accent">בדיקה (Enter)</button>
         <button id="masterSpeakAllBtn" class="btn green hidden" aria-label="השמע את שלוש הצורות"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>השמע את שלוש הצורות</button>
         <button id="masterNextBtn" class="btn accent hidden">הבא (Enter)<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
@@ -1152,6 +1211,7 @@
       <div id="masterEndNote"></div>
       <div class="exam-actions">
         <button id="masterAgainBtn" class="btn accent">בחון שוב את כולם</button>
+        <button id="masterEndBackBtn" class="btn ghost rev-prev rev-end hidden" aria-label="צפייה בניסיונות, מהאחרון אחורה"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg><span>סקירת הניסיונות</span></button>
       </div>
     </div>
   </section>
@@ -1179,7 +1239,7 @@
       </div>
       <div id="writeFeedback" class="feedback" aria-live="polite"></div>
       <div class="exam-actions">
-        <button id="writeBackBtn" class="btn ghost" disabled><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>למילה הקודמת</button>
+        <button id="writeBackBtn" class="btn ghost rev-prev" disabled aria-label="למילה הקודמת (צפייה בלבד)" title="למילה הקודמת (צפייה בלבד) · PageUp"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg><span>הקודם</span></button>
         <button id="checkBtn" class="btn orange">בדיקה (Enter)</button>
         <button id="writeSpeakBtn" class="btn green hidden" aria-label="השמע את שלוש הצורות"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>השמע</button>
         <button id="writeNextBtn" class="btn orange hidden">הבא (Enter)<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
@@ -1193,6 +1253,7 @@
       <div class="exam-actions">
         <button id="writeRestartBtn" class="btn orange">🔄 התחל מחדש</button>
         <button id="writeRetryBtn" class="btn purple">🔁 תרגל רק את המילים שנכשלתי בהן</button>
+        <button id="writeEndBackBtn" class="btn ghost rev-prev rev-end hidden" aria-label="צפייה במילים שעניתם, מהאחרונה אחורה"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg><span>סקירת התשובות</span></button>
       </div>
     </div>
     <div class="lists">
@@ -1213,13 +1274,13 @@
       <div class="prompt"><span id="matchBoard" class="match-board"></span>התאם כל פועל באנגלית לתרגום שלו. טעות מוסיפה שנייה לזמן.</div>
       <div id="matchGrid" class="match-grid" role="group" aria-label="אריחי המשחק"></div>
       <div id="matchMsg" class="feedback" aria-live="polite"></div>
-      <div class="exam-actions"><button id="matchShuffleBtn" class="btn ghost"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h3.5c2 0 3 1 4.5 3.5l2 3.5c1.5 2.5 2.5 3 4.5 3H21M3 17h3.5c1.2 0 2-.3 2.8-1.1M14.7 8.1c.8-.8 1.6-1.1 2.8-1.1H21M18.5 4.5L21 7l-2.5 2.5M18.5 14.5L21 17l-2.5 2.5"/></svg>ערבב את הלוח</button></div>
+      <div class="exam-actions"><button id="matchBackBtn" class="btn ghost rev-prev" disabled aria-label="צפייה בזוגות של הלוח הקודם" title="צפייה בזוגות של הלוח הקודם · PageUp"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg><span>לוח קודם</span></button><button id="matchShuffleBtn" class="btn ghost"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h3.5c2 0 3 1 4.5 3.5l2 3.5c1.5 2.5 2.5 3 4.5 3H21M3 17h3.5c1.2 0 2-.3 2.8-1.1M14.7 8.1c.8-.8 1.6-1.1 2.8-1.1H21M18.5 4.5L21 7l-2.5 2.5M18.5 14.5L21 17l-2.5 2.5"/></svg>ערבב את הלוח</button></div>
     </div>
     <div id="matchEnd" class="panel end hidden" aria-live="polite">
       <h2 class="end-title"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg> <span id="matchEndTitle">כל הכבוד!</span></h2>
       <div id="matchResult" class="big-score"></div>
       <div id="matchEndNote"></div>
-      <div class="exam-actions"><button id="matchNextBtn" class="btn accent hidden">ללוח הבא</button><button id="matchAgainBtn" class="btn accent">להתחיל שוב מההתחלה</button></div>
+      <div class="exam-actions"><button id="matchNextBtn" class="btn accent hidden">ללוח הבא</button><button id="matchAgainBtn" class="btn accent">להתחיל שוב מההתחלה</button><button id="matchEndBackBtn" class="btn ghost rev-prev rev-end hidden" aria-label="צפייה בזוגות של הלוחות שסיימתם"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg><span>צפייה בזוגות הלוח</span></button></div>
     </div>
   </section>
 </div>
@@ -1519,6 +1580,7 @@
   function setMode(mode, force) {
     if (modeReady && !force && mode === state.mode) return; // same tab again: keep the current session
     modeReady = true;
+    closeReview(false);
     const prevMode = state.mode;
     $('modeDesc').textContent = MODE_DESC[mode];
     state.mode = mode;
@@ -2039,6 +2101,7 @@
   function clearQuizTimer() { if (quiz.timer) { clearTimeout(quiz.timer); quiz.timer = null; } }
 
   function startQuiz(verbs) {
+    closeReview(false);
     clearQuizTimer();
     quiz.kind = state.mode === 'tquiz' ? 'trans' : 'forms';
     quiz.dir = state.dir;
@@ -2067,7 +2130,7 @@
       $('quizMeaning').textContent = 'אין מילים בחלק זה';
       $('quizOptions').innerHTML = '';
       $('quizFeedback').textContent = '';
-      $('quizBackBtn').disabled = true;
+      updatePrevBtns();
       return;
     }
     const q = quiz.pool[quiz.pos];
@@ -2085,7 +2148,7 @@
     $('quizMeaning').classList.toggle('hidden', !$('quizMeaning').textContent);
     $('quizFeedback').textContent = '';
     $('quizFeedback').className = 'feedback';
-    $('quizBackBtn').disabled = quiz.pos === 0;
+    updatePrevBtns();
     $('quizSpeakBtn').classList.add('hidden');
     $('quizNextBtn').classList.add('hidden');
     const wrap = $('quizOptions');
@@ -2154,27 +2217,14 @@
       ? 'מילים לחזרה: <span class="ltr">' + escapeHtml(wrongList.join(', ')) + '</span>'
       : 'כל הכבוד! לא הייתה אף טעות 🌟');
     $('quizRetryBtn').classList.toggle('hidden', wrongList.length === 0);
+    updatePrevBtns();
     setRing('quiz', pct);
     if (pct >= 50) confetti(pct >= 90 ? 220 : 130);
     $('quizRestartBtn').focus({ preventScroll: true });
   }
 
-  function quizBack() {
-    if (quiz.pos === 0) return;
-    clearQuizTimer();
-    const undo = (q) => {
-      if (q.chosen === null) return;
-      if (q.options[q.chosen].correct) quiz.score--;
-      else quiz.wrong.delete(q.verb.v1);
-      q.chosen = null;
-    };
-    undo(quiz.pool[quiz.pos]);
-    quiz.pos--;
-    undo(quiz.pool[quiz.pos]);
-    renderQuiz();
-  }
-
-  $('quizBackBtn').addEventListener('click', quizBack);
+  $('quizBackBtn').addEventListener('click', () => openReview('quiz'));
+  $('quizEndBackBtn').addEventListener('click', () => openReview('quiz'));
   $('quizNextBtn').addEventListener('click', nextQuiz);
   $('quizSpeakBtn').addEventListener('click', () => {
     clearQuizTimer(); // let the learner listen; continue with "הבא"
@@ -2189,6 +2239,7 @@
   const inV2 = $('inV2'), inV3 = $('inV3');
 
   function startWrite(verbs) {
+    closeReview(false);
     const base = verbs || partVerbs(state.part);
     write.queue = shuffle(base);
     write.total = write.queue.length;
@@ -2225,8 +2276,8 @@
     $('checkBtn').classList.toggle('hidden', !v);
     $('writeSpeakBtn').classList.add('hidden');
     $('writeNextBtn').classList.add('hidden');
-    $('writeBackBtn').disabled = write.history.length === 0;
     write.checked = false;
+    updatePrevBtns();
     updateWriteStats();
     if (v) inV2.focus({ preventScroll: true });
   }
@@ -2260,7 +2311,7 @@
       write.failSet.add(v.v1);
       addHard(v); // mistakes are offered afterwards ("practice mistakes"), never re-inserted into this session
     }
-    write.history.push({ verb: v, ok: ok, requeued: requeued });
+    write.history.push({ verb: v, ok: ok, requeued: requeued, a2: inV2.value, a3: inV3.value });
     const fb = $('writeFeedback');
     const ans = '<span class="answer">' + hlForm(v, 'v1') + ' – ' + hlForm(v, 'v2') + ' – ' + hlForm(v, 'v3') + '</span>';
     if (ok) { fb.innerHTML = ICONS.check + ' מצוין! ' + ans; fb.className = 'feedback ok'; confetti(30, centerOf(inV3)); bump($('statOk')); }
@@ -2268,31 +2319,9 @@
     $('checkBtn').classList.add('hidden');
     $('writeSpeakBtn').classList.remove('hidden');
     $('writeNextBtn').classList.remove('hidden');
-    $('writeBackBtn').disabled = false;
+    updatePrevBtns();
     updateWriteStats();
     $('writeNextBtn').focus({ preventScroll: true }); // Enter now moves on
-  }
-
-  function writeBack() {
-    if (!write.history.length) return;
-    if (write.current && !write.checked) write.queue.unshift(write.current);
-    const h = write.history.pop();
-    if (h.requeued) {
-      const idx = write.queue.lastIndexOf(h.verb);
-      if (idx >= 0) write.queue.splice(idx, 1);
-    }
-    if (h.ok) {
-      const i = write.success.lastIndexOf(h.verb);
-      if (i >= 0) write.success.splice(i, 1);
-    } else {
-      const i = write.fail.lastIndexOf(h.verb);
-      if (i >= 0) write.fail.splice(i, 1);
-      if (!write.fail.includes(h.verb)) write.failSet.delete(h.verb.v1);
-    }
-    write.current = h.verb;
-    $('writePanel').classList.remove('hidden');
-    $('writeEnd').classList.add('hidden');
-    showWriteVerb();
   }
 
   function endWrite() {
@@ -2306,6 +2335,7 @@
       ? 'כתבת נכון ' + firstTry + ' מתוך ' + write.total + ' מילים. ' + write.failSet.size + ' מילים נוספו לרשימת המילים הקשות, ואפשר לתרגל אותן עכשיו.'
       : 'מושלם! כל המילים נכונות 🌟';
     $('writeRetryBtn').classList.toggle('hidden', write.failSet.size === 0);
+    updatePrevBtns();
     const wpct = write.total ? Math.round(firstTry / write.total * 100) : 0;
     setRing('write', wpct);
     if (wpct >= 50) confetti(wpct >= 90 ? 220 : 130);
@@ -2314,7 +2344,8 @@
 
   $('checkBtn').addEventListener('click', checkWrite);
   $('writeNextBtn').addEventListener('click', () => nextWrite(false));
-  $('writeBackBtn').addEventListener('click', writeBack);
+  $('writeBackBtn').addEventListener('click', () => openReview('write'));
+  $('writeEndBackBtn').addEventListener('click', () => openReview('write'));
   $('writeSpeakBtn').addEventListener('click', () => { const h = write.history[write.history.length - 1]; if (h) speakVerb(h.verb); });
   $('writeRestartBtn').addEventListener('click', () => startWrite());
   $('writeRetryBtn').addEventListener('click', () => { const f = new Set(write.failSet); startWrite(allVerbs.filter(v => f.has(v.v1))); });
@@ -2328,10 +2359,12 @@
 
   // ---------- DICTATION (listen to V1, type V2 + V3) ----------
   const DICT_RATE = 0.8, DICT_SLOW = 0.5;
-  const dict = { pool: [], pos: 0, score: 0, total: 0, wrong: new Set(), hints: 0, checked: false, hinted: false, played: false };
+  const dict = { log: [], pool: [], pos: 0, score: 0, total: 0, wrong: new Set(), hints: 0, checked: false, hinted: false, played: false };
   const dictV2 = $('dictV2'), dictV3 = $('dictV3');
   const dictVerb = () => dict.pool[dict.pos] || null;
   function startDict(verbs) {
+    closeReview(false);
+    dict.log = [];
     dict.pool = shuffle(verbs || partVerbs(state.part));
     dict.pos = 0; dict.score = 0; dict.total = dict.pool.length; dict.wrong = new Set(); dict.hints = 0;
     $('dictPanel').classList.remove('hidden');
@@ -2375,10 +2408,11 @@
     setDictWord(!speech); // no speech support → just show the word (not counted as a hint)
     $('dictPlayLabel').textContent = speech ? 'לחצו כדי לשמוע' : 'ההשמעה לא זמינה';
     updateDictProgress();
+    updatePrevBtns();
     if (!v) return;
     // auto-play once when a new word appears (only after the user interacted with the page, as browsers require)
     const activated = !navigator.userActivation || navigator.userActivation.hasBeenActive;
-    if (speech && activated && state.mode === 'dict') setTimeout(() => { if (dictVerb() === v && !dict.played && state.mode === 'dict') playDict(false); }, initial ? 350 : 150);
+    if (speech && activated && state.mode === 'dict') setTimeout(() => { if (dictVerb() === v && !dict.played && state.mode === 'dict' && !RV.key) playDict(false); }, initial ? 350 : 150);
     $('dictPlayBtn').classList.toggle('nudge', speech && !activated);
     const fine = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
     if (!initial || fine || document.activeElement === document.body) dictV2.focus({ preventScroll: true });
@@ -2411,6 +2445,7 @@
     dictV2.classList.add(ok2 ? 'ok' : 'bad'); dictV3.classList.add(ok3 ? 'ok' : 'bad');
     dictV2.readOnly = dictV3.readOnly = true;
     if (ok) dict.score++; else { dict.wrong.add(v.v1); addHard(v); }
+    dict.log.push({ verb: v, ok: ok, hinted: dict.hinted, a2: dictV2.value, a3: dictV3.value });
     setDictWord(false);
     $('dictHintBtn').disabled = true;
     const head = ok
@@ -2426,6 +2461,7 @@
     $('dictCheckBtn').classList.add('hidden');
     $('dictSpeakAllBtn').classList.toggle('hidden', !canSpeak());
     $('dictNextBtn').classList.remove('hidden');
+    updatePrevBtns();
     $('dictNextBtn').focus({ preventScroll: true });
   }
   function nextDict() {
@@ -2446,6 +2482,7 @@
       ? 'מילים לחזרה (נוספו למילים הקשות): <bdi dir="ltr">' + escapeHtml(wrongList.join(', ')) + '</bdi>'
       : 'כל הכבוד! לא הייתה אף טעות');
     $('dictRetryBtn').classList.toggle('hidden', wrongList.length === 0);
+    updatePrevBtns();
     setRing('dict', pct);
     if (pct >= 50) confetti(pct >= 90 ? 220 : 130);
     $('dictRestartBtn').focus({ preventScroll: true });
@@ -2454,6 +2491,8 @@
   $('dictSlowBtn').addEventListener('click', () => playDict(true));
   $('dictHintBtn').addEventListener('click', hintDict);
   $('dictCheckBtn').addEventListener('click', checkDict);
+  $('dictBackBtn').addEventListener('click', () => openReview('dict'));
+  $('dictEndBackBtn').addEventListener('click', () => openReview('dict'));
   $('dictNextBtn').addEventListener('click', nextDict);
   $('dictSpeakAllBtn').addEventListener('click', () => { const v = dictVerb(); if (v && dict.checked) speakVerb(v); });
   $('dictRestartBtn').addEventListener('click', () => startDict());
@@ -2472,7 +2511,7 @@
   // ---------- MASTERY (listen V1, type V1+V2+V3; wrong words keep returning until all correct) ----------
   // Persistence: a global set of mastered V1s for THIS mode only (irregularVerbs.mastered.v1).
   // Changing scope filters that set; Reset clears mastery for the current scope and rebuilds the queue.
-  const master = { queue: [], scope: [], current: null, checked: false, hinted: false, played: false, sessionOk: 0, attempts: 0, lastOk: false };
+  const master = { log: [], queue: [], scope: [], current: null, checked: false, hinted: false, played: false, sessionOk: 0, attempts: 0, lastOk: false };
   const masterV1 = $('masterV1'), masterV2 = $('masterV2'), masterV3 = $('masterV3');
   function masterScopeKey() { return Number.isInteger(state.part) ? 'p' + state.parts + ':' + state.part : String(state.part); }
   function masterVerb() { return master.current; }
@@ -2484,6 +2523,8 @@
   }
   function startMaster(verbs, opts) {
     const o = opts || {};
+    closeReview(false);
+    master.log = [];
     master.queue = buildMasterQueue(verbs, !!o.reset);
     master.current = null; master.checked = false; master.hinted = false; master.played = false;
     master.sessionOk = 0; master.attempts = 0; master.lastOk = false;
@@ -2529,9 +2570,10 @@
     setMasterWord(!speech);
     $('masterPlayLabel').textContent = speech ? 'לחצו כדי לשמוע' : 'ההשמעה לא זמינה';
     updateMasterStats();
+    updatePrevBtns();
     if (!v) return;
     const activated = !navigator.userActivation || navigator.userActivation.hasBeenActive;
-    if (speech && activated && state.mode === 'master') setTimeout(() => { if (masterVerb() === v && !master.played && state.mode === 'master') playMaster(false); }, 200);
+    if (speech && activated && state.mode === 'master') setTimeout(() => { if (masterVerb() === v && !master.played && state.mode === 'master' && !RV.key) playMaster(false); }, 200);
     $('masterPlayBtn').classList.toggle('nudge', speech && !activated);
     const fine = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
     if (fine || document.activeElement === document.body) masterV1.focus({ preventScroll: true });
@@ -2562,6 +2604,7 @@
     const ok1 = isCorrect(masterV1.value, v.v1), ok2 = isCorrect(masterV2.value, v.v2), ok3 = isCorrect(masterV3.value, v.v3);
     const ok = ok1 && ok2 && ok3;
     master.checked = true; master.lastOk = ok; master.attempts++;
+    master.log.push({ verb: v, ok: ok, hinted: master.hinted, a1: masterV1.value, a2: masterV2.value, a3: masterV3.value });
     masterV1.classList.add(ok1 ? 'ok' : 'bad');
     masterV2.classList.add(ok2 ? 'ok' : 'bad');
     masterV3.classList.add(ok3 ? 'ok' : 'bad');
@@ -2589,6 +2632,7 @@
     $('masterSpeakAllBtn').classList.toggle('hidden', !canSpeak());
     $('masterNextBtn').classList.remove('hidden');
     updateMasterStats();
+    updatePrevBtns();
     $('masterNextBtn').focus({ preventScroll: true });
   }
   function nextMaster(initial) {
@@ -2617,6 +2661,7 @@
       ? '<div class="end-sub">כל ' + n + ' המילים בחלק כבר מסומנות כנשלטות. לחצו על «בחון שוב את כולם» כדי לאפס ולהתחיל מחדש.</div>'
       : '<div class="end-sub">כל ' + n + ' המילים נכונות! מילה נעלמה מהתור רק אחרי תשובה מדויקת.</div>' +
         (master.attempts > n ? '<div class="end-sub">הצליחו אחרי ' + master.attempts + ' ניסיונות בסך הכול.</div>' : '');
+    updatePrevBtns();
     setRing('master', 100);
     confetti(already ? 80 : 220);
     $('masterAgainBtn').focus({ preventScroll: true });
@@ -2632,6 +2677,8 @@
   $('masterSlowBtn').addEventListener('click', () => playMaster(true));
   $('masterHintBtn').addEventListener('click', hintMaster);
   $('masterCheckBtn').addEventListener('click', checkMaster);
+  $('masterBackBtn').addEventListener('click', () => openReview('master'));
+  $('masterEndBackBtn').addEventListener('click', () => openReview('master'));
   $('masterNextBtn').addEventListener('click', () => nextMaster(false));
   $('masterSpeakAllBtn').addEventListener('click', () => { const v = masterVerb(); if (v && master.checked) speakVerb(v); });
   $('masterAgainBtn').addEventListener('click', resetMasterScope);
@@ -2686,6 +2733,7 @@
     return boards;
   }
   function startMatch() {
+    closeReview(false);
     match.boards = buildBoards(shuffle(partVerbs(state.part)));
     match.board = 0;
     match.sessionMs = 0;
@@ -2722,6 +2770,7 @@
       grid.appendChild(b);
     });
     renderMatchStats();
+    updatePrevBtns();
   }
 
   function clickTile(i, el) {
@@ -2770,13 +2819,16 @@
     const isBest = !prev || total < prev;
     if (isBest) { matchBest[key] = total; lsSet(LS_MATCH, matchBest); renderDashboard(); }
     renderMatchStats();
+    updatePrevBtns();
     match.sessionMs = (match.sessionMs || 0) + total;
     const nb = match.boards.length, last = match.board >= nb - 1;
     const totalWords = match.boards.reduce((a, bd) => a + bd.length, 0);
     setTimeout(() => {
       if (state.mode !== 'match' || !match.done) return;
+      const reviewing = RV.key === 'match'; // opened "previous board" during the short pause: fill the end screen, show it on return
       $('matchPanel').classList.add('hidden');
-      $('matchEnd').classList.remove('hidden');
+      if (reviewing) { RV.atEnd = true; RV.wasPanel = false; } else $('matchEnd').classList.remove('hidden');
+      updatePrevBtns();
       const bestNote = isBest ? (prev ? 'שיא חדש ללוח! השיא הקודם: ' + fmtSec(prev) + ' שנ׳' : 'זה השיא הראשון שלך בחלק הזה!') : 'השיא שלך ללוח: ' + fmtSec(prev) + ' שנ׳';
       if (last) {
         $('matchEndTitle').textContent = nb > 1 ? 'סיימת את כל המילים!' : 'כל הכבוד!';
@@ -2790,6 +2842,7 @@
       }
       $('matchNextBtn').classList.toggle('hidden', last);
       $('matchAgainBtn').className = last ? 'btn accent' : 'btn ghost';
+      if (reviewing) return;
       (last ? $('matchAgainBtn') : $('matchNextBtn')).focus({ preventScroll: true });
       confetti(last ? 220 : (isBest ? 130 : 70));
     }, 450);
@@ -2797,6 +2850,162 @@
   $('matchShuffleBtn').addEventListener('click', () => playBoard(match.current || [], true)); // same words, new positions
   $('matchNextBtn').addEventListener('click', () => { if (match.board < match.boards.length - 1) { match.board++; playBoard(match.boards[match.board], false); } });
   $('matchAgainBtn').addEventListener('click', startMatch);
+  $('matchBackBtn').addEventListener('click', () => openReview('match'));
+  $('matchEndBackBtn').addEventListener('click', () => openReview('match'));
+
+  // ---------- REVIEW: go back to previous words (view only) ----------
+  // The live panel is only hidden, never re-rendered, so typed text / the current question stay exactly as they were.
+  // Review never answers, scores, or changes the difficult / known / mastered sets.
+  const RV = { key: null, list: [], idx: 0, atEnd: false, wasPanel: false };
+  const RV_CFG = {
+    quiz: { sec: 'quizSection', panel: 'quizPanel', end: 'quizEnd', btn: 'quizBackBtn', endBtn: 'quizEndBackBtn',
+      list: (atEnd) => quiz.pool.slice(0, atEnd ? quiz.pool.length : quiz.pos).filter(q => q.chosen !== null) },
+    write: { sec: 'writeSection', panel: 'writePanel', end: 'writeEnd', btn: 'writeBackBtn', endBtn: 'writeEndBackBtn',
+      list: (atEnd) => (atEnd || !write.checked) ? write.history.slice() : write.history.slice(0, -1) },
+    dict: { sec: 'dictSection', panel: 'dictPanel', end: 'dictEnd', btn: 'dictBackBtn', endBtn: 'dictEndBackBtn',
+      list: (atEnd) => dict.log.slice(0, atEnd ? dict.log.length : Math.min(dict.pos, dict.log.length)) },
+    master: { sec: 'masterSection', panel: 'masterPanel', end: 'masterEnd', btn: 'masterBackBtn', endBtn: 'masterEndBackBtn',
+      list: (atEnd) => (atEnd || !master.checked) ? master.log.slice() : master.log.slice(0, -1) },
+    match: { sec: 'matchSection', panel: 'matchPanel', end: 'matchEnd', btn: 'matchBackBtn', endBtn: 'matchEndBackBtn',
+      list: () => (match.boards || []).slice(0, match.board + (match.done ? 1 : 0)).map((verbs, i) => ({ verbs: verbs, board: i })) }
+  };
+  const rvKeyFor = (mode) => (mode === 'tquiz' ? 'quiz' : (RV_CFG[mode] ? mode : null));
+  const RV_EYE = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></svg>';
+  const RV_RET = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>';
+  function reviewEl(key) {
+    const id = key + 'Review';
+    let el = $(id);
+    if (!el) {
+      const c = RV_CFG[key];
+      el = document.createElement('div');
+      el.id = id; el.className = 'panel review-panel hidden';
+      el.setAttribute('role', 'region'); el.setAttribute('aria-label', 'צפייה במילה קודמת');
+      $(c.sec).insertBefore(el, $(c.panel));
+      el.addEventListener('click', (ev) => {
+        const b = ev.target.closest('[data-rv]');
+        if (!b || b.disabled) return;
+        const a = b.dataset.rv;
+        if (a === 'prev') rvStep(-1);
+        else if (a === 'next') rvStep(1);
+        else if (a === 'return') closeReview(true);
+        else if (a === 'speak') rvSpeak();
+        else if (a === 'say') { const v = verbByV1.get(b.dataset.v1); if (v) speakVerb(v); }
+      });
+    }
+    return el;
+  }
+  function updatePrevBtns() {
+    if (RV.key) return;
+    Object.keys(RV_CFG).forEach(k => {
+      const c = RV_CFG[k];
+      if (!$(c.btn)) return;
+      $(c.btn).disabled = c.list(false).length === 0;
+      if (c.endBtn) $(c.endBtn).classList.toggle('hidden', c.list(true).length === 0);
+    });
+  }
+  function openReview(key) {
+    if (!key || !RV_CFG[key]) return;
+    if (RV.key) { rvStep(-1); return; }
+    const c = RV_CFG[key];
+    const atEnd = !$(c.end).classList.contains('hidden');
+    const list = c.list(atEnd);
+    if (!list.length) return;
+    clearQuizTimer(); // a pending quiz auto-advance waits; on return the answered question shows "הבא"
+    stopSpeech();
+    if (key === 'match' && match.interval && !match.done) { stopMatchTimer(); match.pausedAt = Date.now(); }
+    RV.key = key; RV.list = list; RV.idx = list.length - 1; RV.atEnd = atEnd;
+    RV.wasPanel = !$(c.panel).classList.contains('hidden');
+    $(c.panel).classList.add('hidden'); $(c.end).classList.add('hidden');
+    reviewEl(key).classList.remove('hidden');
+    renderReview();
+  }
+  function closeReview(focus) {
+    if (!RV.key) return;
+    const key = RV.key, c = RV_CFG[key];
+    reviewEl(key).classList.add('hidden');
+    if (RV.atEnd) $(c.end).classList.remove('hidden');
+    else if (RV.wasPanel) $(c.panel).classList.remove('hidden');
+    if (key === 'match' && match.pausedAt) {
+      if (match.start) match.start += Date.now() - match.pausedAt; // the pause does not count
+      match.pausedAt = 0;
+      if (!match.done && match.start) match.interval = setInterval(renderMatchStats, 100);
+    }
+    const atEnd = RV.atEnd;
+    RV.key = null; RV.list = []; RV.idx = 0; RV.atEnd = false;
+    stopSpeech();
+    updatePrevBtns();
+    if (focus) rvFocusLive(key, atEnd);
+  }
+  function rvFocusLive(key, atEnd) {
+    const c = RV_CFG[key];
+    let t = null;
+    if (atEnd) t = $(c.end).querySelector('button:not(.hidden)');
+    else if (key === 'quiz') { const q = quiz.pool[quiz.pos]; t = q && q.chosen !== null ? $('quizNextBtn') : document.querySelector('#quizOptions .opt'); }
+    else if (key === 'write') t = write.checked ? $('writeNextBtn') : inV2;
+    else if (key === 'dict') t = dict.checked ? $('dictNextBtn') : (dictV2.value && !dictV3.value ? dictV3 : dictV2);
+    else if (key === 'master') t = master.checked ? $('masterNextBtn') : masterV1;
+    else if (key === 'match') t = document.querySelector('#matchGrid .tile:not(:disabled)');
+    if (t && t.focus) t.focus({ preventScroll: true });
+  }
+  function rvStep(d) {
+    if (!RV.key) return;
+    const n = RV.idx + d;
+    if (n < 0) return;
+    if (n >= RV.list.length) { closeReview(true); return; }
+    RV.idx = n; stopSpeech(); renderReview();
+  }
+  function rvSpeak() {
+    const e = RV.list[RV.idx]; if (!e || !e.verb) return;
+    speakVerb(e.verb, RV.key === 'quiz' && quiz.kind === 'trans');
+  }
+  function rvForms(v) { return '<bdi class="rv-forms" dir="ltr">' + hlForm(v, 'v1') + ' – ' + hlForm(v, 'v2') + ' – ' + hlForm(v, 'v3') + '</bdi>'; }
+  function rvTyped(lbl, typed, good) {
+    const t = (typed || '').trim();
+    return '<span class="rv-ans ' + (good ? 'ok' : 'bad') + '"><small>' + lbl + '</small><bdi dir="ltr">' + (t ? escapeHtml(t) : '—') + '</bdi>' + (good ? ICONS.check : ICONS.x) + '</span>';
+  }
+  function renderReview() {
+    const key = RV.key, e = RV.list[RV.idx], el = reviewEl(key), n = RV.list.length;
+    let pos = '', body = '';
+    if (key === 'quiz') {
+      const v = e.verb, i = quiz.pool.indexOf(e), ok = e.options[e.chosen].correct;
+      pos = 'שאלה ' + (i + 1) + ' מתוך ' + quiz.pool.length;
+      const he2en = quiz.kind === 'trans' && quiz.dir === 'he2en';
+      body = '<div class="rv-q">' + (he2en ? '<div class="rv-word" dir="rtl">' + escapeHtml(v.he) + '</div>'
+        : '<bdi class="rv-word" dir="ltr">' + escapeHtml(v.v1) + '</bdi>' + (quiz.kind === 'trans' ? '' : '<div class="rv-sub">' + escapeHtml(v.he) + '</div>')) + '</div>' +
+        '<div class="rv-status ' + (ok ? 'ok' : 'bad') + '">' + (ok ? ICONS.check + ' ענית נכון' : ICONS.x + ' טעית בשאלה הזו') + '</div>' +
+        '<div class="options rv-options" role="list">' + e.options.map((o, j) => '<div role="listitem" class="opt' + (o.he ? ' he' : '') + (o.correct ? ' correct' : (j === e.chosen ? ' wrong' : ' dim')) + '"' + (o.he ? '' : ' dir="ltr"') + '>' +
+          escapeHtml(o.text) + (j === e.chosen ? '<span class="rv-you">התשובה שלך</span>' : '') + '</div>').join('') + '</div>' +
+        '<div class="rv-correct"><span class="rv-lbl">' + (quiz.kind === 'trans' ? 'התרגום' : 'שלוש הצורות') + '</span>' +
+        (quiz.kind === 'trans' ? '<bdi dir="ltr" class="rv-forms">' + escapeHtml(v.v1) + '</bdi> = ' + escapeHtml(v.he) : rvForms(v)) + '</div>';
+    } else if (key === 'match') {
+      pos = 'לוח ' + (e.board + 1) + ' מתוך ' + match.boards.length;
+      body = '<div class="rv-q"><div class="rv-word rv-word-sm">הזוגות בלוח ' + (e.board + 1) + '</div><div class="rv-sub">' + e.verbs.length + ' זוגות · כל הזוגות הותאמו</div></div>' +
+        '<ul class="rv-pairs">' + e.verbs.map(v => '<li><bdi dir="ltr" class="rv-pair-en">' + escapeHtml(v.v1) + '</bdi><span class="rv-pair-he">' + escapeHtml(v.he) + '</span>' +
+          '<button type="button" class="icon-btn rv-say" data-rv="say" data-v1="' + escapeHtml(v.v1) + '" aria-label="השמע ' + escapeHtml(v.v1) + '">' + ICONS.speak + '</button></li>').join('') + '</ul>';
+    } else {
+      const v = e.verb, ok = e.ok;
+      const i = RV.list.indexOf(e);
+      const all = key === 'write' ? write.total : key === 'dict' ? dict.total : 0;
+      pos = key === 'master' ? 'ניסיון ' + (i + 1) + ' מתוך ' + master.log.length : 'מילה ' + (i + 1) + ' מתוך ' + all;
+      const cue = key === 'write' ? '' : '<div class="rv-cue">' + 'הפועל שהושמע' + (e.hinted ? ' · <span class="dict-hinted">עם רמז</span>' : '') + '</div>';
+      const typed = (key === 'master' ? rvTyped('V1', e.a1, isCorrect(e.a1, v.v1)) : '') + rvTyped('V2', e.a2, isCorrect(e.a2, v.v2)) + rvTyped('V3', e.a3, isCorrect(e.a3, v.v3));
+      body = '<div class="rv-q">' + cue + '<bdi class="rv-word" dir="ltr">' + escapeHtml(v.v1) + '</bdi><div class="rv-sub">' + escapeHtml(v.he) + '</div></div>' +
+        '<div class="rv-status ' + (ok ? 'ok' : 'bad') + '">' + (ok ? ICONS.check + ' ענית נכון' : ICONS.x + (key === 'master' ? ' טעות — המילה חזרה לתור' : ' לא מדויק')) + '</div>' +
+        '<div class="rv-block"><span class="rv-lbl">מה כתבת</span><div class="rv-typed">' + typed + '</div></div>' +
+        '<div class="rv-correct"><span class="rv-lbl">התשובה הנכונה</span>' + rvForms(v) + '</div>';
+    }
+    const retLbl = RV.atEnd ? 'חזרה לסיכום' : key === 'match' ? 'חזרה ללוח הנוכחי' : key === 'quiz' ? 'חזרה לשאלה הנוכחית' : 'חזרה למילה הנוכחית';
+    el.innerHTML = '<div class="rv-head"><span class="rv-badge">' + RV_EYE + 'מצב צפייה</span><span class="rv-pos">' + pos + '</span></div>' + body +
+      '<div class="exam-actions rv-actions">' +
+        '<button type="button" class="btn ghost rev-prev" data-rv="prev"' + (RV.idx === 0 ? ' disabled' : '') + ' aria-label="' + (key === 'match' ? 'הלוח הקודם' : 'המילה הקודמת') + '">' + ICONS.prev + '<span>' + (key === 'match' ? 'לוח קודם' : 'הקודם') + '</span></button>' +
+        (key === 'match' ? '' : '<button type="button" class="btn green" data-rv="speak" aria-label="השמע את שלוש הצורות">' + ICONS.speak + 'השמע</button>') +
+        '<button type="button" class="btn ghost rv-next" data-rv="next">' + (RV.idx === n - 1 ? retLbl : 'הבא') + ICONS.next + '</button>' +
+      '</div>' +
+      (RV.idx === n - 1 ? '' : '<button type="button" class="btn accent rv-return" data-rv="return">' + RV_RET + retLbl + '</button>') +
+      '<div class="rv-note">צפייה בלבד · הציון וההתקדמות לא משתנים</div>';
+    const first = el.querySelector('[data-rv="prev"]:not(:disabled)') || el.querySelector('[data-rv="next"]');
+    if (first) first.focus({ preventScroll: true });
+  }
 
   // ---------- GLOBAL KEYBOARD ----------
   document.addEventListener('keydown', (e) => {
@@ -2804,7 +3013,19 @@
     if (helpModal.open) return; // the dialog handles its own keys (Esc closes)
     const t = e.target;
     const tag = t && t.tagName;
-    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    const typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+    // Review (previous words): PageUp = back, PageDown = forward work even while typing; arrows only outside text fields.
+    if (RV.key) {
+      if (e.key === 'Escape') { e.preventDefault(); closeReview(true); }
+      else if (e.key === 'PageUp' || (!typing && e.key === 'ArrowRight')) { e.preventDefault(); rvStep(-1); }   // RTL: right = previous
+      else if (e.key === 'PageDown' || (!typing && e.key === 'ArrowLeft')) { e.preventDefault(); rvStep(1); }
+      return; // Enter / Space activate the focused review button natively
+    }
+    if (!isStudy() && (e.key === 'PageUp' || (!typing && e.key === 'ArrowRight'))) {
+      const k = rvKeyFor(state.mode);
+      if (k) { e.preventDefault(); openReview(k); return; }
+    }
+    if (typing) return;
     if (isStudy()) {
       if (cards.done) return;
       const inCardControls = t && t.closest && (t.closest('#cardControls') || t.closest('.sort-row') || t === cardEl);
