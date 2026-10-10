@@ -71,6 +71,15 @@ async function typeInto(page, sel, value) {
   return (await readValue(page, sel)) === want;
 }
 
+// תמונת מצב לאבחון (בלי ערכים): אורך כל שדה והודעות האימות האדומות שמוצגות בדף
+async function formReport(page) {
+  return page.evaluate(() => {
+    const len = (k) => { const e = document.querySelector(`[data-fb="${k}"]`); return e ? e.value.length : -1; };
+    const errs = [...document.querySelectorAll('*')].filter((e) => e.children.length === 0 && e.offsetParent !== null && /ספרות|הזן|חובה|שגוי|תקין/.test(e.textContent || '') && getComputedStyle(e).color.replace(/\s/g, '').startsWith('rgb(2')).map((e) => e.textContent.trim().slice(0, 60));
+    return { lengths: { id: len('id'), card: len('card'), pass: len('pass') }, errors: errs.slice(0, 4), url: location.pathname };
+  }).catch(() => ({}));
+}
+
 class PatchedIsracardScraper extends IsracardScraper {
   async login(credentials) {
     const page = this.page;
@@ -98,6 +107,11 @@ class PatchedIsracardScraper extends IsracardScraper {
     }
     await tagLoginFields(page);
     for (const [sel, v] of wanted) if ((await readValue(page, `[data-fb="${sel}"]`)) !== String(v)) throw new Error(`Isracard: field "${sel}" did not keep its value`);
+    const before = await formReport(page);
+    if (before.errors && before.errors.length) { // הדף מציג שגיאת אימות: לא שולחים, מנסים להקליד שוב לאט
+      for (const [sel, v] of wanted) { await typeInto(page, `[data-fb="${sel}"]`, v); await settle(); }
+    }
+    this.lastReport = before;
     await page.click('[data-fb="submit"]');
     await page.waitForFunction((src) => !/personalarea\/Login/i.test(location.href) || new RegExp(src).test(document.body.innerText), { timeout: 45000 }, ERROR_RE.source).catch(() => {});
     if (!/personalarea\/Login/i.test(page.url())) {
@@ -106,8 +120,10 @@ class PatchedIsracardScraper extends IsracardScraper {
       await new Promise((r) => setTimeout(r, 1500));
       return { success: true };
     }
+    const after = await formReport(page);
+    if (process.env.FB_DEBUG_DIR) await page.screenshot({ path: require('path').join(process.env.FB_DEBUG_DIR, 'isracard-login.png') }).catch(() => {});
     const failed = await page.evaluate((src) => new RegExp(src).test(document.body.innerText), ERROR_RE.source).catch(() => false);
-    return { success: false, errorType: failed ? ScraperErrorTypes.InvalidPassword : ScraperErrorTypes.Generic, errorMessage: failed ? undefined : 'Isracard login did not complete' };
+    return { success: false, errorType: failed ? ScraperErrorTypes.InvalidPassword : ScraperErrorTypes.Generic, errorMessage: failed ? undefined : `Isracard login did not complete ${JSON.stringify({ before: this.lastReport, after })}` };
   }
 }
 
