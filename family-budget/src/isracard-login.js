@@ -151,13 +151,24 @@ class PatchedIsracardScraper extends IsracardScraper {
   }
 }
 
+// ממתין שכתובת העמוד לא תשתנה כמה שניות ברצף (האתר מנווט מעמוד לעמוד אחרי הכניסה, וקריאה באמצע ניווט נקטעת)
+async function waitStable(page, seconds = 4, maxSeconds = 40) {
+  let last = '', same = 0;
+  for (let i = 0; i < maxSeconds && same < seconds; i++) {
+    await new Promise((r) => setTimeout(r, 1000));
+    const now = page.url();
+    same = now === last ? same + 1 : 0; last = now;
+  }
+  await page.waitForNetworkIdle({ idleTime: 1500, timeout: 15000 }).catch(() => {});
+}
+
 PatchedIsracardScraper.prototype.fetchData = async function fetchData() {
   const base = IsracardScraper.prototype.fetchData;
   for (let attempt = 1; ; attempt++) {
-    try { return await base.call(this); } catch (e) {
+    try { await waitStable(this.page); return await base.call(this); } catch (e) {
       const msg = String((e && e.message) || e);
-      if (attempt < 3 && /Failed to fetch|context was destroyed|navigation|detached|Target closed/i.test(msg)) {
-        if (/Failed to fetch/i.test(msg)) await this.page.goto(this.cardListPageUrl, { waitUntil: 'domcontentloaded' }).catch(() => {}); // עמוד ביניים (StatusPage): עוברים לעמוד הכרטיסים ומנסים שוב // הדף עבר ניווט באמצע: ממתינים ומנסים שוב
+      if (attempt < 5 && /Failed to fetch|context was destroyed|navigation|detached|Target closed/i.test(msg)) {
+        if (attempt === 2 && /Failed to fetch/i.test(msg)) await this.page.goto(this.cardListPageUrl, { waitUntil: 'domcontentloaded' }).catch(() => {}); // עמוד ביניים (StatusPage): עוברים לעמוד הכרטיסים ומנסים שוב // הדף עבר ניווט באמצע: ממתינים ומנסים שוב
         await this.page.waitForNetworkIdle({ idleTime: 1500, timeout: 20000 }).catch(() => {});
         continue;
       }
