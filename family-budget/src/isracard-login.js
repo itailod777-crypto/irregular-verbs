@@ -165,7 +165,26 @@ async function waitStable(page, seconds = 4, maxSeconds = 40) {
 PatchedIsracardScraper.prototype.fetchData = async function fetchData() {
   const base = IsracardScraper.prototype.fetchData;
   for (let attempt = 1; ; attempt++) {
-    try { await waitStable(this.page); return await base.call(this); } catch (e) {
+    try {
+      await waitStable(this.page);
+      // קריאות הנתונים מתבצעות מתוך עמוד. בעמודי האתר עצמם הן נקטעות (Failed to fetch), לכן מריצים אותן מלשונית נקייה באותו דומיין
+      // (אותן עוגיות, אבל בלי הסקריפטים והניווטים של האתר). אם זה לא מצליח, חוזרים לעמוד המקורי.
+      const original = this.page;
+      let clean = null;
+      try {
+        clean = await original.browser().newPage();
+        await clean.goto(`${this.baseUrl}/robots.txt`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        this.page = clean;
+        return await base.call(this);
+      } catch (inner) {
+        this.page = original;
+        if (!/Failed to fetch|robots|net::|Navigation|timeout/i.test(String(inner && inner.message))) throw inner;
+      } finally {
+        this.page = original;
+        if (clean) await clean.close().catch(() => {});
+      }
+      return await base.call(this);
+    } catch (e) {
       const msg = String((e && e.message) || e);
       if (attempt < 5 && /Failed to fetch|context was destroyed|navigation|detached|Target closed/i.test(msg)) {
         if (attempt === 2 && /Failed to fetch/i.test(msg)) await this.page.goto(this.cardListPageUrl, { waitUntil: 'domcontentloaded' }).catch(() => {}); // עמוד ביניים (StatusPage): עוברים לעמוד הכרטיסים ומנסים שוב // הדף עבר ניווט באמצע: ממתינים ומנסים שוב
