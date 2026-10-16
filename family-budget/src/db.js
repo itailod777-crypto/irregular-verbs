@@ -49,6 +49,7 @@ function openDb(file) {
   db.exec(SCHEMA);
   if (!db.prepare('PRAGMA table_info(transactions)').all().some((c) => c.name === 'created_by')) db.exec('ALTER TABLE transactions ADD COLUMN created_by INTEGER');
   if (!db.prepare('PRAGMA table_info(transactions)').all().some((c) => c.name === 'card')) db.exec('ALTER TABLE transactions ADD COLUMN card TEXT');
+  db.exec('CREATE TABLE IF NOT EXISTS fin_accounts (key TEXT PRIMARY KEY, account_id INTEGER NOT NULL, kind TEXT NOT NULL, data TEXT NOT NULL, updated_at TEXT NOT NULL)');
   const accCols = db.prepare('PRAGMA table_info(accounts)').all().map((c) => c.name);
   if (!accCols.includes('paused')) db.exec('ALTER TABLE accounts ADD COLUMN paused INTEGER NOT NULL DEFAULT 0');
   if (!accCols.includes('fail_count')) db.exec('ALTER TABLE accounts ADD COLUMN fail_count INTEGER NOT NULL DEFAULT 0');

@@ -102,6 +102,7 @@ async function syncAccount({ db, vault, account, createScraperImpl, launchBrowse
       const { fetchFinancy } = require('./financy');
       const fin = await (opts.fetchFinancy || fetchFinancy)(creds, start);
       const r = addTransactions(db, fin.rows, { source: 'scraper', accountId: account.id });
+      try { require('./overview').saveFinAccounts(db, account.id, fin.accounts); } catch (e) { console.error('שמירת יתרות נכשלה:', e.message); }
       return finish('ok', { added: r.added, duplicates: r.duplicates, pendingSkipped: 0 });
     }
     const executablePath = findBrowser();

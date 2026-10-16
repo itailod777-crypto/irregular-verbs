@@ -23,7 +23,7 @@ function icon(name, size = 20) {
 
 const state = { auth: null, year: null, month: null, months: [], cats: [], accounts: [], account: null, status: null, route: 'home' };
 const ROUTES = [
-  ['home', 'בית', 'home'], ['recurring', 'מנויים והוצאות קבועות', 'repeat'], ['onetime', 'הוצאות חד-פעמיות', 'bolt'],
+  ['home', 'בית', 'home'], ['overview', 'חשבונות ויתרות', 'bank'], ['recurring', 'מנויים והוצאות קבועות', 'repeat'], ['onetime', 'הוצאות חד-פעמיות', 'bolt'],
   ['transactions', 'כל העסקאות', 'list'], ['budget', 'תקציב', 'wallet'], ['year', 'סיכום שנתי', 'calendar'], ['family', 'משפחה', 'users'], ['accounts', 'כרטיסים וחשבונות', 'bank'],
 ];
 const isAdmin = () => !state.auth || !state.auth.usersExist || state.auth.user?.role === 'admin';
@@ -712,7 +712,7 @@ function updateCard() {
   return card('גרסה ועדכונים', 'כשיש תיקון או שיפור, מעדכנים כאן בלחיצה אחת, בלי לחפש קבצים.', body);
 }
 
-const PAGES = { home: pageHome, recurring: pageRecurring, onetime: pageOneTime, transactions: pageTransactions, budget: pageBudget, year: pageYear, family: pageFamily, accounts: pageAccounts };
+const PAGES = { overview: (v) => window.__pageOverview(v), home: pageHome, recurring: pageRecurring, onetime: pageOneTime, transactions: pageTransactions, budget: pageBudget, year: pageYear, family: pageFamily, accounts: pageAccounts };
 
 // ---------- אתחול ----------
 (async function init() {

@@ -137,6 +137,7 @@ function createApp({ db, vault, port, createScraperImpl, lan, updater }) {
   app.post('/api/vault/lock', wrap((req, res) => { admin(req); vault.lock(); require('./dpapi').forget(); res.json({ ok: true }); }));
 
   // ---- חשבונות (פרטי כניסה נשמרים רק בכספת המוצפנת ולעולם לא מוחזרים) ----
+  app.get('/api/overview', wrap((req, res) => res.json(require('./overview').buildOverview(db))));
   app.get('/api/companies', wrap((req, res) => res.json(listCompanies())));
   app.get('/api/accounts', wrap((req, res) => res.json(db.prepare('SELECT id,label,company,last_sync,last_status,paused FROM accounts ORDER BY id').all())));
   const readCreds = (company, input) => {

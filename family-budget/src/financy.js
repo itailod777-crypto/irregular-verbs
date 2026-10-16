@@ -65,7 +65,7 @@ async function getCardProviders(token, f) {
 const PROVIDER_NAMES = { isracard: 'ישראכרט', max: 'מקס', cal: 'כאל', visacal: 'כאל', leumi: 'לאומי', hapoalim: 'הפועלים', discount: 'דיסקונט', mizrahi: 'מזרחי', diners: 'דיינרס', amex: 'אמריקן אקספרס' };
 // שם קריא לכל חשבון או כרטיס ב-Financy, כדי שבדשבורד יוצג איזה כרטיס שילם
 async function getAccountLabels(token, f) {
-  const map = new Map();
+  const map = new Map(); const items = [];
   try {
     let cursor = null, pages = 0;
     do {
@@ -75,6 +75,7 @@ async function getAccountLabels(token, f) {
       const j = await res.json();
       for (const a of j.items || []) {
         if (!a || !a.id) continue;
+        items.push(a);
         const last4 = String(a.accountNumber || '').replace(/D/g, '').slice(-4);
         const prov = PROVIDER_NAMES[String(a.providerId || '').toLowerCase()] || a.providerId || '';
         const product = /חיוב נדחה/.test(a.product || '') ? '' : (a.product || ''); // 'חיוב נדחה' הוא סוג החיוב ולא שם הכרטיס
@@ -84,14 +85,14 @@ async function getAccountLabels(token, f) {
       cursor = j.nextPage || null;
     } while (cursor && ++pages < 20);
   } catch { /* בלי שמות: נשארים עם שם המקור */ }
-  return map;
+  return { map, items };
 }
 
 async function fetchFinancy(creds, startDate, { fetchImpl = globalThis.fetch } = {}) {
   const f = fetchImpl;
   let token = await getToken(creds, f);
   const cardProviders = await getCardProviders(token, f);
-  const accountLabels = await getAccountLabels(token, f);
+  const { map: accountLabels, items: accountItems } = await getAccountLabels(token, f);
   let refreshed = false;
   const from = new Date(startDate).toISOString().slice(0, 10);
   const rows = []; let skipped = 0, cursor = null, pages = 0;
@@ -113,7 +114,7 @@ async function fetchFinancy(creds, startDate, { fetchImpl = globalThis.fetch } =
     cursor = j.nextPage || null;
     if (!cursor || ++pages >= 200) break;
   }
-  return { rows, skipped };
+  return { rows, skipped, accounts: require('./overview').normalizeAccounts(accountItems) };
 }
 
 module.exports = { fetchFinancy, mapItem, shiftMonths, FinancyError };

@@ -156,3 +156,15 @@ dialog { border: 0; border-radius: 24px; box-shadow: 0 40px 80px -30px rgba(0,0,
   .card { padding: 18px; border-radius: 20px; }
   .status-card { border-radius: 24px; }
 }
+
+/* ---- חשבונות ויתרות ---- */
+.ov-track { background: var(--surface-2); height: 8px; margin: 6px 0 2px; }
+.ov-fill-card { background: linear-gradient(90deg, var(--apricot), var(--s2)); }
+.ov-mort { border-radius: 16px; background: var(--surface-2); padding: 4px 16px; margin-top: 10px; }
+.ov-mort summary { display: flex; align-items: center; gap: 10px; min-height: 52px; cursor: pointer; list-style: none; }
+.ov-mort summary::-webkit-details-marker { display: none; }
+.ov-mort[open] { padding-bottom: 10px; }
+.ov-sum-name { font-weight: 600; }
+.ov-loans { display: grid; gap: 10px; }
+.ov-loan { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 16px; background: var(--surface-2); }
+.acct-grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
