@@ -1,12 +1,12 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { fetchFinancy, mapItem } = require('../src/financy');
+const { fetchFinancy, mapItem, shiftMonths } = require('../src/financy');
 
 const tx = (o) => ({ id: 'x', providerId: 'max', type: 'NORMAL', merchantName: 'Shufersal', amount: { chargedAmount: { amount: -239.9, currency: 'ILS' } }, description: { description: 'SHUFERSAL DEAL', additionalInfo: '' }, date: { transactionDate: '2026-10-04' }, ...o });
 
 test('מיפוי תנועת Financy: סכום, תאריך, תיאור, תשלומים', () => {
-  assert.deepEqual(mapItem(tx({ installments: { number: 2, total: 6 } })), { date: '2026-10-04', amount: -239.9, description: 'Shufersal', memo: null, installment: { number: 2, total: 6 } });
+  assert.deepEqual(mapItem(tx({ installments: { number: 2, total: 6 } })), { date: '2026-11-04', amount: -239.9, description: 'Shufersal', memo: null, installment: { number: 2, total: 6 } });
 });
 test('מדלג על כפילויות, ועל חיוב כרטיס אשראי בעו"ש (כדי לא לספור פעמיים)', () => {
   assert.equal(mapItem(tx({ isDuplicate: true })), null);
@@ -75,4 +75,11 @@ test('חיוב כרטיס בעו"ש בשם מקוצר ("מקס איט פיננ-�
 test('תנועה עם תאריך ערך בלבד (בלי תאריך עסקה או רישום) לא נזרקת', () => {
   const r = mapItem(tx({ date: { valueDate: '2026-10-04' } }));
   assert.ok(r); assert.equal(r.date, '2026-10-04');
+});
+
+test('תשלומים: כל תשלום נספר בחודש שבו הוא יורד (תשלום n מוזז ב-n-1 חודשים)', () => {
+  assert.equal(mapItem(tx({ date: { transactionDate: '2026-04-09' }, installments: { number: 1, total: 6 } })).date, '2026-04-09');
+  assert.equal(mapItem(tx({ date: { transactionDate: '2026-04-09' }, installments: { number: 6, total: 6 } })).date, '2026-09-09');
+  assert.equal(shiftMonths('2026-01-31', 1), '2026-02-28');
+  assert.equal(shiftMonths('2026-11-15', 3), '2027-02-15');
 });

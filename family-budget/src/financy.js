@@ -22,6 +22,15 @@ async function getToken(creds, f) {
   return j.accessToken;
 }
 
+// Financy מחזיר את כל התשלומים של עסקה בתשלומים עם תאריך הרכישה. כדי שכל תשלום ייספר בחודש שבו הוא באמת יורד, מזיזים תשלום מספר n ב-(n-1) חודשים.
+function shiftMonths(iso, months) {
+  if (!months) return iso;
+  const [y, m, d] = iso.split('-').map(Number);
+  const total = (y * 12 + (m - 1)) + months, ny = Math.floor(total / 12), nm = total % 12;
+  const last = new Date(Date.UTC(ny, nm + 1, 0)).getUTCDate();
+  return `${ny}-${String(nm + 1).padStart(2, '0')}-${String(Math.min(d, last)).padStart(2, '0')}`;
+}
+
 // ממפה תנועה של Financy לשורה של האפליקציה. מחזיר null כשצריך לדלג.
 function mapItem(t, cardProviders) {
   if (!t || t.isDuplicate) return null;
@@ -35,7 +44,7 @@ function mapItem(t, cardProviders) {
   const isCardProvider = (cardProviders && cardProviders.has(pid)) || /^(max|isracard|cal|visacal|visa_cal|amex|diners)$/i.test(pid);
   if (!isCardProvider && String(t.type || '') !== 'CARD' && amt.amount < 0 && CARD_ISSUERS.test(desc)) return null;
   return {
-    date: String(date).slice(0, 10), amount: amt.amount, description: desc,
+    date: shiftMonths(String(date).slice(0, 10), t.installments && t.installments.total && t.installments.number > 1 ? t.installments.number - 1 : 0), amount: amt.amount, description: desc,
     memo: (t.description && t.description.additionalInfo) || null,
     installment: t.installments && t.installments.total ? { number: t.installments.number, total: t.installments.total } : null,
   };
@@ -80,4 +89,4 @@ async function fetchFinancy(creds, startDate, { fetchImpl = globalThis.fetch } =
   return { rows, skipped };
 }
 
-module.exports = { fetchFinancy, mapItem, FinancyError };
+module.exports = { fetchFinancy, mapItem, shiftMonths, FinancyError };
