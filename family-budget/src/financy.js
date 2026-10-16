@@ -46,6 +46,7 @@ function mapItem(t, cardProviders, accountLabels) {
   return {
     date: shiftMonths(String(date).slice(0, 10), t.installments && t.installments.total && t.installments.number > 1 ? t.installments.number - 1 : 0), amount: amt.amount, description: desc,
     memo: (t.description && t.description.additionalInfo) || null,
+    fcat: (t.category && t.category.sub) || null, // הסיווג של Financy (לפי קוד עסק), משמש כגיבוי כשאין לאפליקציה כלל
     card: (accountLabels && accountLabels.get(t.accountId)) || null,
     installment: t.installments && t.installments.total ? { number: t.installments.number, total: t.installments.total } : null,
   };

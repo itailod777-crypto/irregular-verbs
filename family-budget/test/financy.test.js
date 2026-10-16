@@ -6,7 +6,7 @@ const { fetchFinancy, mapItem, shiftMonths } = require('../src/financy');
 const tx = (o) => ({ id: 'x', providerId: 'max', type: 'NORMAL', merchantName: 'Shufersal', amount: { chargedAmount: { amount: -239.9, currency: 'ILS' } }, description: { description: 'SHUFERSAL DEAL', additionalInfo: '' }, date: { transactionDate: '2026-10-04' }, ...o });
 
 test('מיפוי תנועת Financy: סכום, תאריך, תיאור, תשלומים', () => {
-  assert.deepEqual(mapItem(tx({ installments: { number: 2, total: 6 } })), { date: '2026-11-04', amount: -239.9, description: 'Shufersal', memo: null, card: null, installment: { number: 2, total: 6 } });
+  assert.deepEqual(mapItem(tx({ installments: { number: 2, total: 6 } })), { date: '2026-11-04', amount: -239.9, description: 'Shufersal', memo: null, fcat: null, card: null, installment: { number: 2, total: 6 } });
 });
 test('מדלג על כפילויות, ועל חיוב כרטיס אשראי בעו"ש (כדי לא לספור פעמיים)', () => {
   assert.equal(mapItem(tx({ isDuplicate: true })), null);
@@ -94,4 +94,20 @@ test('שם הכרטיס: כל תנועה מסומנת בכרטיס או בחשב
   };
   const r = await fetchFinancy({ clientId: 'a', clientSecret: 'b', userId: 'c' }, new Date('2026-09-01'), { fetchImpl });
   assert.equal(r.rows[0].card, 'ישראכרט גולד - מסטרקארד ·0357');
+});
+
+test('סיווג: כשאין כלל לאפליקציה, משתמשים בסיווג של Financy (ומנצחים את "אחר")', async (t) => {
+  const { startApp } = require('./helpers');
+  const { addTransactions } = require('../src/store');
+  const ctx = await startApp(); t.after(ctx.close);
+  const name = (id) => ctx.db.prepare('SELECT name FROM categories WHERE id=?').get(id).name;
+  addTransactions(ctx.db, [
+    { date: '2026-10-01', amount: -80, description: 'מסעדת הדגמה לא מוכרת', fcat: 'RESTAURANT' },
+    { date: '2026-10-02', amount: -120, description: 'חנות הדגמה לא מוכרת', fcat: 'BUSINESS_EXPENSES' },
+    { date: '2026-10-03', amount: 9000, description: 'מעסיק הדגמה', fcat: 'SALARY' },
+  ], { source: 'scraper' });
+  const rows = ctx.db.prepare('SELECT description, category_id FROM transactions ORDER BY date').all();
+  assert.equal(name(rows[0].category_id), 'מסעדות וקפה');
+  assert.equal(name(rows[1].category_id), 'אחר', 'קטגוריה של Financy שלא ממפים נשארת אחר');
+  assert.equal(name(rows[2].category_id), 'משכורת');
 });

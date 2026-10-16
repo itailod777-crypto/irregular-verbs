@@ -19,6 +19,18 @@ function fallbacks(db) {
 }
 
 // rows: [{date:'YYYY-MM-DD', amount:number (שלילי=הוצאה), description, memo?, installment?}]
+// הסיווג של Financy (קטגוריית משנה) לקטגוריות של האפליקציה. משמש רק כשאין כלל שמזהה את העסקה (נשארה "אחר").
+const FIN_TO_APP = {
+  'RESTAURANT': 'מסעדות וקפה', 'COFFEE_&_SNACKS': 'מסעדות וקפה', 'BARS': 'מסעדות וקפה', 'GROCERIES': 'סופרמרקט', 'ALCOHOL_&_TOBACCO': 'סופרמרקט',
+  'CAR_&_FUEL': 'דלק', 'TRANSPORT_OTHER': 'תחבורה', 'TAXI': 'תחבורה', 'PUBLIC_TRANSPORT': 'תחבורה', 'FLIGHTS': 'פנאי ובילויים',
+  'INSURANCE_&_FEES': 'ביטוח', 'COMMUNICATIONS': 'סלולר ואינטרנט', 'UTILITIES': 'חשמל',
+  'CLOTHES_&_ACCESSORIES': 'ביגוד והנעלה', 'PHARMACY': 'בריאות', 'HEALTHCARE': 'בריאות', 'EYECARE': 'בריאות',
+  'SPORTS_&_FITNESS': 'פנאי ובילויים', 'CULTURE_&_EVENTS': 'פנאי ובילויים', 'VACATION': 'פנאי ובילויים', 'LEISURE_OTHER': 'פנאי ובילויים', 'BOOKS_&_GAMES': 'פנאי ובילויים', 'HOBBY_&_SPORTS_EQUIPMENT': 'פנאי ובילויים',
+  'EDUCATION': 'חינוך וילדים', 'PETS': 'חיות מחמד', 'RENOVATION_&_REPAIRS': 'בית וגינה', 'FURNITURE_&_INTERIOR': 'בית וגינה',
+  'GOVERNMENT SERVICES': 'מסים ואגרות', 'FEES': 'עמלות בנק', 'MORTGAGE': 'שכר דירה ומשכנתא', 'LOAN': 'שכר דירה ומשכנתא',
+};
+const FIN_INCOME_TO_APP = { 'SALARY': 'משכורת' };
+
 function addTransactions(db, rows, { source, accountId = null } = {}) {
   const clean = [];
   for (const r of rows) {
@@ -32,10 +44,15 @@ function addTransactions(db, rows, { source, accountId = null } = {}) {
   const fb = fallbacks(db);
   const ins = db.prepare(`INSERT OR IGNORE INTO transactions
     (hash,date,amount,description,norm,memo,category_id,account_id,source,card) VALUES (?,?,?,?,?,?,?,?,?,?)`);
+  const byName = new Map(db.prepare('SELECT id, name FROM categories').all().map((c) => [c.name, c.id]));
   let added = 0, duplicates = 0;
   tx(db, () => {
     for (const t of clean) {
-      const { categoryId } = categorize(t.description, t.amount, rules, fb);
+      let { categoryId } = categorize(t.description, t.amount, rules, fb);
+      if (t.fcat && (categoryId === fb.expense || categoryId === fb.income)) {
+        const name = (categoryId === fb.income ? FIN_INCOME_TO_APP : FIN_TO_APP)[t.fcat];
+        if (name && byName.has(name)) categoryId = byName.get(name);
+      }
       const res = ins.run(t.hash, t.date, t.amount, t.description, normalize(t.description), t.memo || null, categoryId, accountId, source, t.card || null);
       if (res.changes) added++; else duplicates++;
     }
