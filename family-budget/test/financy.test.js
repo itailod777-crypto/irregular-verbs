@@ -64,3 +64,10 @@ test('ספק כרטיס לפי רשימת הספקים של Financy: תנועת 
   assert.ok(mapItem(tx({ providerId: 'newcard', merchantName: 'ישראכרט חנות', description: d }), cards));
   assert.equal(mapItem(tx({ providerId: 'hapoalim', merchantName: 'ישראכרט', description: d }), cards), null);
 });
+
+test('חיוב כרטיס בעו"ש בשם מקוצר ("מקס איט פיננ-י") מדולג, אבל "המקסיקני" ו"מקס סטוק" נשמרים', () => {
+  const bank = { providerId: 'leumi', type: 'NORMAL' };
+  assert.equal(mapItem(tx({ ...bank, merchantName: 'מקס איט פיננ-י', description: { description: 'מקס איט פיננ-י' } })), null);
+  assert.ok(mapItem(tx({ ...bank, merchantName: 'המקסיקני פתח תקווה', description: { description: 'המקסיקני פתח תקווה' } })));
+  assert.ok(mapItem(tx({ ...bank, merchantName: 'מקס סטוק פ"ת - 2', description: { description: 'מקס סטוק פ"ת - 2' } })));
+});

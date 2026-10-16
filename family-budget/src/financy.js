@@ -3,7 +3,8 @@
 // אין כאן סיסמאות בנק בכלל: רק מפתח API (clientId/clientSecret/userId) שמופיע ב-Financy ← הגדרות ← API. נדרשת תוכנית Starter ומעלה.
 const API = 'https://api.open-finance.ai';
 const PAGE = 200;
-const CARD_ISSUERS = /ישראכרט|מקס\b|max\b|כאל|visa\s*cal|ויזה|לאומי\s*קארד|דיינרס|diners|אמריקן|amex|isracard|כרטיסי\s*אשראי|כ\.?א\.?ל/i;
+// בעברית  לא עובד, לכן גבולות מפורשים. חיוב כרטיס בעו"ש מופיע כמו 'מקס איט פיננ-י' או 'ישראכרט בע"מ'
+const CARD_ISSUERS = /ישראכרט|מקס[ ]*איט|max(?![a-z])|(?<![א-ת])כאל(?![א-ת])|visa[ ]*cal|ויזה[ ]*כאל|לאומי[ ]*קארד|דיינרס|diners|אמריקן[ ]*אקספרס|amex|isracard|כרטיסי[ ]*אשראי/i;
 
 class FinancyError extends Error {
   constructor(message, errorType) { super(message); this.errorType = errorType || 'GENERIC'; }
