@@ -112,6 +112,7 @@ function createApp({ db, vault, port, createScraperImpl, lan, updater }) {
     const last = db.prepare("SELECT * FROM sync_log WHERE status<>'running' ORDER BY id DESC LIMIT 1").get() || null;
     res.json({
       vault: !vault.exists() ? 'missing' : vault.isUnlocked() ? 'unlocked' : 'locked',
+      canRemember: require('./dpapi').supported() && !process.versions.electron, remembered: require('./dpapi').exists(),
       syncing: state.syncing, accounts: accounts.length, failing, lastSync: last,
     });
   }));
@@ -122,13 +123,18 @@ function createApp({ db, vault, port, createScraperImpl, lan, updater }) {
   }));
   app.post('/api/vault/unlock', wrap((req, res) => { admin(req);
     if (Date.now() < state.lockedUntil) { const e = new Error('יותר מדי ניסיונות. נסה שוב בעוד דקה.'); e.status = 429; throw e; }
-    try { vault.unlock(String(req.body.password || '')); state.unlockFails = 0; res.json({ ok: true }); }
+    try {
+      vault.unlock(String(req.body.password || '')); state.unlockFails = 0;
+      const dp = require('./dpapi');
+      if (req.body.remember === true && dp.supported() && !process.versions.electron) dp.save(String(req.body.password));
+      res.json({ ok: true });
+    }
     catch (e) {
       if (e instanceof WrongPasswordError && ++state.unlockFails >= 5) { state.lockedUntil = Date.now() + 60000; state.unlockFails = 0; }
       throw e;
     }
   }));
-  app.post('/api/vault/lock', wrap((req, res) => { admin(req); vault.lock(); res.json({ ok: true }); }));
+  app.post('/api/vault/lock', wrap((req, res) => { admin(req); vault.lock(); require('./dpapi').forget(); res.json({ ok: true }); }));
 
   // ---- חשבונות (פרטי כניסה נשמרים רק בכספת המוצפנת ולעולם לא מוחזרים) ----
   app.get('/api/companies', wrap((req, res) => res.json(listCompanies())));

@@ -51,7 +51,7 @@ server.on('error', (e) => {
 });
 
 // משיכה יומית אוטומטית בזמן שהאפליקציה פתוחה: רק אם יש חשבונות, הכספת פתוחה והשעה הגיעה.
-setInterval(async () => {
+const autoSyncTick = async () => {
   try {
     if (getSetting(db, 'auto_sync', '1') !== '1' || !vault.isUnlocked() || app._state.syncing) return;
     if (!db.prepare('SELECT COUNT(*) c FROM accounts').get().c) return;
@@ -62,6 +62,8 @@ setInterval(async () => {
     app._state.syncing = true;
     try { await runSync({ db, vault }); } finally { app._state.syncing = false; }
   } catch (e) { console.error('משיכה אוטומטית נכשלה:', e.message); }
-}, 10 * 60 * 1000).unref();
+};
+setInterval(autoSyncTick, 10 * 60 * 1000).unref();
+setTimeout(autoSyncTick, 30 * 1000).unref(); // המחשב נדלק אחרי שעת המשיכה: משלימים מיד
 
 process.on('SIGINT', () => process.exit(0));

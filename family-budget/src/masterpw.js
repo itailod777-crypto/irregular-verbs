@@ -17,7 +17,7 @@ function findMasterPassword() {
   if (f) return readKeyFile(f);
   if (fs.existsSync(DEFAULT_KEY_FILE)) return readKeyFile(DEFAULT_KEY_FILE);
   if (process.env.BUDGET_MASTER_PASSWORD) return process.env.BUDGET_MASTER_PASSWORD;
-  return null;
+  try { return require('./dpapi').load(); } catch { return null; } // 'זכור במחשב הזה' (Windows)
 }
 
 module.exports = { findMasterPassword };
