@@ -25,7 +25,7 @@ async function getToken(creds, f) {
 // ממפה תנועה של Financy לשורה של האפליקציה. מחזיר null כשצריך לדלג.
 function mapItem(t, cardProviders) {
   if (!t || t.isDuplicate) return null;
-  const date = t.date && (t.date.transactionDate || t.date.bookingDate);
+  const date = t.date && (t.date.transactionDate || t.date.bookingDate || t.date.valueDate);
   const amt = t.amount && t.amount.chargedAmount;
   if (!date || !amt || typeof amt.amount !== 'number') return null;
   const desc = String((t.merchantName || (t.description && t.description.description) || t.creditorName || t.debtorName || '')).trim();

@@ -71,3 +71,8 @@ test('חיוב כרטיס בעו"ש בשם מקוצר ("מקס איט פיננ-�
   assert.ok(mapItem(tx({ ...bank, merchantName: 'המקסיקני פתח תקווה', description: { description: 'המקסיקני פתח תקווה' } })));
   assert.ok(mapItem(tx({ ...bank, merchantName: 'מקס סטוק פ"ת - 2', description: { description: 'מקס סטוק פ"ת - 2' } })));
 });
+
+test('תנועה עם תאריך ערך בלבד (בלי תאריך עסקה או רישום) לא נזרקת', () => {
+  const r = mapItem(tx({ date: { valueDate: '2026-10-04' } }));
+  assert.ok(r); assert.equal(r.date, '2026-10-04');
+});
