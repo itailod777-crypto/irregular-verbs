@@ -367,7 +367,7 @@ async function pageTransactions(view) {
       try { const res = await api('PATCH', `/api/transactions/${t.id}`, { categoryId: Number(sel.value) }); toast('הקטגוריה עודכנה'); if (res.suggestion) suggestRule(t, res.suggestion); else load(); } catch (e) { toast(e.message, true); }
     } }, catOptions(t.category_id));
     return h('tr', {}, h('td', {}, dateLabel(t.date)),
-      h('td', {}, h('div', { class: 'cell-desc', title: t.description }, t.description), h('div', { class: 'chips' }, t.source === 'manual' ? h('span', { class: 'chip' }, t.created_by_name ? `הוזן על ידי ${t.created_by_name}` : 'הוזן ידנית') : null, state.accounts.length > 1 && t.account_id ? h('span', { class: 'chip' }, acctLabel(t.account_id)) : null)),
+      h('td', {}, h('div', { class: 'cell-desc', title: t.description }, t.description), h('div', { class: 'chips' }, t.source === 'manual' ? h('span', { class: 'chip' }, t.created_by_name ? `הוזן על ידי ${t.created_by_name}` : 'הוזן ידנית') : null, (t.card || (state.accounts.length > 1 && t.account_id)) ? h('span', { class: 'chip' }, t.card || acctLabel(t.account_id)) : null)),
       h('td', {}, sel), h('td', { class: 'amt ' + (t.amount > 0 ? 'pos' : '') }, (t.amount > 0 ? '+' : '') + fmt2(t.amount)),
       h('td', {}, t.source === 'manual' ? h('button', { class: 'btn sm danger', type: 'button', onclick: async () => { if (!confirm('למחוק את העסקה?')) return; await api('DELETE', `/api/transactions/${t.id}`); load(); } }, 'מחיקה') : null));
   }

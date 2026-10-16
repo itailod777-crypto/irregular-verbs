@@ -296,7 +296,7 @@ function listTransactions(db, { month, q, categoryId, accountId, type, limit = 2
   if (type === 'expense') where.push('t.amount<0');
   const w = where.join(' AND ');
   const total = db.prepare(`SELECT COUNT(*) c FROM transactions t WHERE ${w}`).get(...args).c;
-  const items = db.prepare(`SELECT t.id,t.date,t.amount,t.description,t.memo,t.category_id,t.manual_category,t.ignored,t.source,t.account_id,
+  const items = db.prepare(`SELECT t.id,t.date,t.amount,t.description,t.memo,t.category_id,t.manual_category,t.ignored,t.source,t.account_id,t.card,
       c.name category, c.color color, c.kind kind, u.display_name created_by_name
     FROM transactions t JOIN categories c ON c.id=t.category_id LEFT JOIN users u ON u.id=t.created_by WHERE ${w}
     ORDER BY t.date DESC, t.id DESC LIMIT ? OFFSET ?`).all(...args, Math.min(Number(limit) || 200, 1000), Number(offset) || 0);
