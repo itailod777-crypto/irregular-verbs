@@ -90,7 +90,7 @@ async function refreshStatus() {
     const pw = h('input', { type: 'password', placeholder: 'הסיסמה האישית', autocomplete: 'current-password', 'aria-label': 'הסיסמה האישית', style: { maxWidth: '240px' } });
     const btn = h('button', { class: 'btn primary sm', type: 'button' }, 'פתיחה');
     const rem = window.desktop || st.canRemember ? h('label', { class: 'field inline' }, h('input', { type: 'checkbox', checked: !window.desktop }), 'זכור במחשב הזה') : null;
-    const go = busy(btn, async () => { await api('POST', '/api/vault/unlock', { password: pw.value, remember: !window.desktop && !!(rem && rem.querySelector('input').checked) }); if (rem && rem.querySelector('input').checked) await window.desktop.rememberPassword(pw.value); pw.value = ''; toast('נפתח. עכשיו אפשר לעדכן עסקאות'); await refreshStatus(); render(); });
+    const go = busy(btn, async () => { await api('POST', '/api/vault/unlock', { password: pw.value, remember: !window.desktop && !!(rem && rem.querySelector('input').checked) }); if (window.desktop && rem && rem.querySelector('input').checked) await window.desktop.rememberPassword(pw.value); pw.value = ''; toast('נפתח. עכשיו אפשר לעדכן עסקאות'); await refreshStatus(); render(); });
     btn.addEventListener('click', go); pw.addEventListener('keydown', (e) => e.key === 'Enter' && go());
     box.append(h('div', { class: 'banner info' }, icon('lock'), h('div', { class: 'grow' }, h('strong', {}, 'הסיסמה האישית נעולה'), 'כדי שהאפליקציה תוכל לעדכן עסקאות מהבנק, הקלידו את הסיסמה שבחרתם.'), pw, rem, btn));
   }
