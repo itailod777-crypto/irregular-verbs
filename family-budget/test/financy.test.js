@@ -6,7 +6,7 @@ const { fetchFinancy, mapItem, shiftMonths } = require('../src/financy');
 const tx = (o) => ({ id: 'x', providerId: 'max', type: 'NORMAL', merchantName: 'Shufersal', amount: { chargedAmount: { amount: -239.9, currency: 'ILS' } }, description: { description: 'SHUFERSAL DEAL', additionalInfo: '' }, date: { transactionDate: '2026-10-04' }, ...o });
 
 test('מיפוי תנועת Financy: סכום, תאריך, תיאור, תשלומים', () => {
-  assert.deepEqual(mapItem(tx({ installments: { number: 2, total: 6 } })), { date: '2026-11-04', amount: -239.9, description: 'Shufersal', memo: null, installment: { number: 2, total: 6 } });
+  assert.deepEqual(mapItem(tx({ installments: { number: 2, total: 6 } })), { date: '2026-11-04', amount: -239.9, description: 'Shufersal', memo: null, card: null, installment: { number: 2, total: 6 } });
 });
 test('מדלג על כפילויות, ועל חיוב כרטיס אשראי בעו"ש (כדי לא לספור פעמיים)', () => {
   assert.equal(mapItem(tx({ isDuplicate: true })), null);
@@ -52,6 +52,7 @@ test('טוקן שפג באמצע משיכה: מונפק חדש ומנסים שו
   const fetchImpl = async (url) => {
     if (url.endsWith('/oauth/token')) return { ok: true, status: 200, json: async () => ({ accessToken: 'T' + (++tokens) }) };
     if (url.includes('/v2/providers')) return { ok: true, status: 200, json: async () => [{ providerFriendlyId: 'isracard', type: 'CARD' }] };
+    if (url.includes('/v2/data/accounts')) return { ok: true, status: 200, json: async () => ({ items: [] }) };
     if (first) { first = false; return { ok: false, status: 401 }; }
     return { ok: true, status: 200, json: async () => ({ items: [tx({})] }) };
   };
@@ -82,4 +83,15 @@ test('תשלומים: כל תשלום נספר בחודש שבו הוא יורד
   assert.equal(mapItem(tx({ date: { transactionDate: '2026-04-09' }, installments: { number: 6, total: 6 } })).date, '2026-09-09');
   assert.equal(shiftMonths('2026-01-31', 1), '2026-02-28');
   assert.equal(shiftMonths('2026-11-15', 3), '2027-02-15');
+});
+
+test('שם הכרטיס: כל תנועה מסומנת בכרטיס או בחשבון שממנו הגיעה', async () => {
+  const fetchImpl = async (url) => {
+    if (url.endsWith('/oauth/token')) return { ok: true, status: 200, json: async () => ({ accessToken: 'T' }) };
+    if (url.includes('/v2/providers')) return { ok: false, status: 404 };
+    if (url.includes('/v2/data/accounts')) return { ok: true, status: 200, json: async () => ({ items: [{ id: 'A1', providerId: 'isracard', accountType: 'CARD', product: 'גולד - מסטרקארד', accountNumber: '************0357' }] }) };
+    return { ok: true, status: 200, json: async () => ({ items: [tx({ accountId: 'A1', providerId: 'isracard' })] }) };
+  };
+  const r = await fetchFinancy({ clientId: 'a', clientSecret: 'b', userId: 'c' }, new Date('2026-09-01'), { fetchImpl });
+  assert.equal(r.rows[0].card, 'ישראכרט גולד - מסטרקארד ·0357');
 });

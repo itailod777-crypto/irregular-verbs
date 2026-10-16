@@ -32,7 +32,7 @@ function shiftMonths(iso, months) {
 }
 
 // ממפה תנועה של Financy לשורה של האפליקציה. מחזיר null כשצריך לדלג.
-function mapItem(t, cardProviders) {
+function mapItem(t, cardProviders, accountLabels) {
   if (!t || t.isDuplicate) return null;
   const date = t.date && (t.date.transactionDate || t.date.bookingDate || t.date.valueDate);
   const amt = t.amount && t.amount.chargedAmount;
@@ -46,6 +46,7 @@ function mapItem(t, cardProviders) {
   return {
     date: shiftMonths(String(date).slice(0, 10), t.installments && t.installments.total && t.installments.number > 1 ? t.installments.number - 1 : 0), amount: amt.amount, description: desc,
     memo: (t.description && t.description.additionalInfo) || null,
+    card: (accountLabels && accountLabels.get(t.accountId)) || null,
     installment: t.installments && t.installments.total ? { number: t.installments.number, total: t.installments.total } : null,
   };
 }
@@ -61,10 +62,35 @@ async function getCardProviders(token, f) {
   } catch { return null; }
 }
 
+const PROVIDER_NAMES = { isracard: 'ישראכרט', max: 'מקס', cal: 'כאל', visacal: 'כאל', leumi: 'לאומי', hapoalim: 'הפועלים', discount: 'דיסקונט', mizrahi: 'מזרחי', diners: 'דיינרס', amex: 'אמריקן אקספרס' };
+// שם קריא לכל חשבון או כרטיס ב-Financy, כדי שבדשבורד יוצג איזה כרטיס שילם
+async function getAccountLabels(token, f) {
+  const map = new Map();
+  try {
+    let cursor = null, pages = 0;
+    do {
+      const q = new URLSearchParams({ limit: '100' }); if (cursor) q.set('nextPage', cursor);
+      const res = await f(`${API}/v2/data/accounts?${q}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) break;
+      const j = await res.json();
+      for (const a of j.items || []) {
+        if (!a || !a.id) continue;
+        const last4 = String(a.accountNumber || '').replace(/D/g, '').slice(-4);
+        const prov = PROVIDER_NAMES[String(a.providerId || '').toLowerCase()] || a.providerId || '';
+        const kind = a.accountType === 'CARD' ? (a.product || 'כרטיס') : (a.product || 'חשבון');
+        map.set(a.id, [prov, kind, last4 ? `·${last4}` : ''].filter(Boolean).join(' '));
+      }
+      cursor = j.nextPage || null;
+    } while (cursor && ++pages < 20);
+  } catch { /* בלי שמות: נשארים עם שם המקור */ }
+  return map;
+}
+
 async function fetchFinancy(creds, startDate, { fetchImpl = globalThis.fetch } = {}) {
   const f = fetchImpl;
   let token = await getToken(creds, f);
   const cardProviders = await getCardProviders(token, f);
+  const accountLabels = await getAccountLabels(token, f);
   let refreshed = false;
   const from = new Date(startDate).toISOString().slice(0, 10);
   const rows = []; let skipped = 0, cursor = null, pages = 0;
@@ -82,7 +108,7 @@ async function fetchFinancy(creds, startDate, { fetchImpl = globalThis.fetch } =
     if (res.status === 409) throw new FinancyError('אין ב-Financy בנק או כרטיס מחובר. חבר אותם באתר של Financy.', 'GENERIC');
     if (!res.ok) throw new FinancyError(`Financy transactions failed (${res.status})`);
     const j = await res.json();
-    for (const it of j.items || []) { const r = mapItem(it, cardProviders); if (r) rows.push(r); else skipped++; }
+    for (const it of j.items || []) { const r = mapItem(it, cardProviders, accountLabels); if (r) rows.push(r); else skipped++; }
     cursor = j.nextPage || null;
     if (!cursor || ++pages >= 200) break;
   }

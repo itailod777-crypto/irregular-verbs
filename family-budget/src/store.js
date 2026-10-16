@@ -31,12 +31,12 @@ function addTransactions(db, rows, { source, accountId = null } = {}) {
   const rules = loadRules(db);
   const fb = fallbacks(db);
   const ins = db.prepare(`INSERT OR IGNORE INTO transactions
-    (hash,date,amount,description,norm,memo,category_id,account_id,source) VALUES (?,?,?,?,?,?,?,?,?)`);
+    (hash,date,amount,description,norm,memo,category_id,account_id,source,card) VALUES (?,?,?,?,?,?,?,?,?,?)`);
   let added = 0, duplicates = 0;
   tx(db, () => {
     for (const t of clean) {
       const { categoryId } = categorize(t.description, t.amount, rules, fb);
-      const res = ins.run(t.hash, t.date, t.amount, t.description, normalize(t.description), t.memo || null, categoryId, accountId, source);
+      const res = ins.run(t.hash, t.date, t.amount, t.description, normalize(t.description), t.memo || null, categoryId, accountId, source, t.card || null);
       if (res.changes) added++; else duplicates++;
     }
   });
@@ -225,8 +225,8 @@ function insights(db, month, accountId = null) {
   }
   const topMerchants = [...merchants.values()].map((m) => ({ name: [...m.names.entries()].sort((a, b) => b[1] - a[1])[0][0], total: m.total, count: m.count }))
     .sort((a, b) => b.total - a.total).slice(0, 8);
-  const byAccount = db.prepare(`SELECT a.id, COALESCE(a.label, 'ללא כרטיס (ידני או מקובץ)') label, SUM(-t.amount) total FROM transactions t JOIN categories c ON c.id=t.category_id
-    LEFT JOIN accounts a ON a.id=t.account_id WHERE t.ignored=0 AND c.kind='expense' AND substr(t.date,1,7)=? GROUP BY a.id ORDER BY total DESC`).all(month).filter((r) => r.total > 0);
+  const byAccount = db.prepare(`SELECT MIN(a.id) id, COALESCE(t.card, a.label, 'ללא כרטיס (ידני או מקובץ)') label, SUM(-t.amount) total FROM transactions t JOIN categories c ON c.id=t.category_id
+    LEFT JOIN accounts a ON a.id=t.account_id WHERE t.ignored=0 AND c.kind='expense' AND substr(t.date,1,7)=? GROUP BY label ORDER BY total DESC`).all(month).filter((r) => r.total > 0);
   const dim = daysIn(month), daily = new Array(dim).fill(0);
   for (const r of rows) if (r.date.startsWith(month) && (!accountId || r.account_id === accountId)) daily[Number(r.date.slice(8, 10)) - 1] += -r.amount;
   // ממוצע הוצאה לכל יום בשבוע (ראשון=0), עד היום אם זה החודש הנוכחי
@@ -277,7 +277,7 @@ function exportCsv(db, { month, accountId }) {
   const where = ['1=1'], args = [];
   if (month && month !== 'all') { monthRange(month); where.push('substr(t.date,1,7)=?'); args.push(month); }
   if (accountId) { where.push('t.account_id=?'); args.push(accountId); }
-  const rows = db.prepare(`SELECT t.date, t.description, t.amount, c.name category, COALESCE(a.label,'') card, t.source FROM transactions t
+  const rows = db.prepare(`SELECT t.date, t.description, t.amount, c.name category, COALESCE(t.card, a.label, '') card, t.source FROM transactions t
     JOIN categories c ON c.id=t.category_id LEFT JOIN accounts a ON a.id=t.account_id WHERE ${where.join(' AND ')} ORDER BY t.date, t.id`).all(...args);
   const cell = (v) => { let x = String(v ?? ''); if (/^[=+\-@\t\r]/.test(x)) x = "'" + x; return `"${x.replace(/"/g, '""')}"`; };
   const src = { scraper: 'עדכון אוטומטי', import: 'קובץ', manual: 'ידני', demo: 'דוגמה' };
