@@ -77,7 +77,8 @@ async function getAccountLabels(token, f) {
         if (!a || !a.id) continue;
         const last4 = String(a.accountNumber || '').replace(/D/g, '').slice(-4);
         const prov = PROVIDER_NAMES[String(a.providerId || '').toLowerCase()] || a.providerId || '';
-        const kind = a.accountType === 'CARD' ? (a.product || 'כרטיס') : (a.product || 'חשבון');
+        const product = /חיוב נדחה/.test(a.product || '') ? '' : (a.product || ''); // 'חיוב נדחה' הוא סוג החיוב ולא שם הכרטיס
+        const kind = product || (a.accountType === 'CARD' ? 'כרטיס' : 'חשבון');
         map.set(a.id, [prov, kind, last4 ? `·${last4}` : ''].filter(Boolean).join(' '));
       }
       cursor = j.nextPage || null;
