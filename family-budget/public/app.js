@@ -297,21 +297,46 @@ function welcomeCard() {
 }
 
 // ---------- מנויים והוצאות קבועות ----------
+// ---------- מי זה? ----------
+function whoDialog(name, res) {
+  const info = res && res.info;
+  const link = (href, text, primary) => h('a', { class: 'btn' + (primary ? ' primary' : ''), href, target: '_blank', rel: 'noopener noreferrer' }, text);
+  const body = info
+    ? h('div', { class: 'who' },
+      h('p', { class: 'who-name' }, info.name),
+      h('p', {}, info.what),
+      info.how ? h('p', { class: 'hint' }, `איך מבטלים: ${info.how}`) : null,
+      h('div', { class: 'row' }, info.cancel ? link(info.cancel, 'לדף הביטול', true) : null, info.site ? link(info.site, 'לאתר של החברה') : null),
+      h('p', { class: 'hint' }, 'הקישורים נפתחים באתר הרשמי של החברה. האפליקציה לא מבטלת כלום בשמכם.'))
+    : h('div', { class: 'who' },
+      h('p', {}, `לא זיהינו את "${name}" ברשימה שלנו.`),
+      h('p', { class: 'hint' }, 'אפשר לחפש את השם בגוגל. הפתיחה קורית רק כשלוחצים, ורק שם בית העסק נשלח לחיפוש.'),
+      h('div', { class: 'row' }, link(res ? res.search : '#', 'חיפוש בגוגל', true)));
+  modal('מי זה?', h('div', {}, h('p', { class: 'sub' }, name), body), (close) => [h('button', { class: 'btn', type: 'button', onclick: close }, 'סגירה')]);
+}
+async function whoIs(name) {
+  const r = await api('POST', '/api/merchants/identify', { names: [name] });
+  whoDialog(name, r.results[name]);
+}
+
 async function pageRecurring(view) {
   const r = await api('GET', q('/api/recurring'));
   const key = h('input', { placeholder: 'שם בית העסק, למשל: גן ילדים', 'aria-label': 'בית עסק להוספה כקבוע' });
   const add = h('button', { class: 'btn', type: 'button' }, icon('plus', 16), 'הוספה לרשימה');
   add.addEventListener('click', busy(add, async () => { if (!key.value.trim()) throw new Error('כתבו שם בית עסק'); await api('PUT', '/api/recurring/override', { key: key.value.trim(), recurring: true }); toast('נוסף'); render(); }));
+  const who = (await api('POST', '/api/merchants/identify', { names: r.items.map((i) => i.name) })).results;
   const groups = new Map();
   for (const i of r.items) { const g = groups.get(i.category) || { name: i.category, color: i.color, items: [], total: 0 }; g.items.push(i); g.total += i.thisMonth || i.average; groups.set(i.category, g); }
   const sorted = [...groups.values()].sort((a, b) => b.total - a.total);
   const subCard = (i) => h('div', { class: 'sub-card' },
     h('div', { class: 'sc-name' }, i.name),
+    who[i.name] && who[i.name].info ? h('div', { class: 'sc-who' }, `${who[i.name].info.name}: ${who[i.name].info.what}`) : null,
     h('div', { class: 'sc-amount num' }, fmt(i.thisMonth || i.average), h('span', { class: 'of' }, ' בחודש')),
     h('div', { class: 'sc-meta' }, i.day ? `מתחייב בדרך כלל ב-${i.day} לחודש` : 'יום חיוב משתנה'),
     h('div', { class: 'sc-foot' },
       i.thisMonth ? h('span', { class: 'chip good' }, '✓ חויב החודש') : i.pending ? h('span', { class: 'chip warn' }, '◔ עוד לא חויב') : h('span', { class: 'chip' }, 'לא פעיל החודש'),
       sparkline(i.monthly)),
+    h('button', { class: 'btn sm', type: 'button', onclick: () => whoDialog(i.name, who[i.name]) }, who[i.name] && who[i.name].info ? 'מי זה ואיך מבטלים' : 'מי זה?'),
     h('button', { class: 'btn sm ghost', type: 'button', onclick: async () => { await api('PUT', '/api/recurring/override', { key: i.key, recurring: false }).catch((e) => toast(e.message, true)); toast('הועבר להוצאות חד-פעמיות'); render(); } }, 'זה לא הוצאה קבועה'));
   view.replaceChildren(h('div', { class: 'fade-in' },
     pageHead('מנויים והוצאות קבועות', 'האפליקציה מזהה לבד כל דבר שחוזר כל חודש: מנויים, חשבונות, ארנונה, ביטוחים ועוד.'),
@@ -367,7 +392,7 @@ async function pageTransactions(view) {
       try { const res = await api('PATCH', `/api/transactions/${t.id}`, { categoryId: Number(sel.value) }); toast('הקטגוריה עודכנה'); if (res.suggestion) suggestRule(t, res.suggestion); else load(); } catch (e) { toast(e.message, true); }
     } }, catOptions(t.category_id));
     return h('tr', {}, h('td', {}, dateLabel(t.date)),
-      h('td', {}, h('div', { class: 'cell-desc', title: t.description }, t.description), h('div', { class: 'chips' }, t.source === 'manual' ? h('span', { class: 'chip' }, t.created_by_name ? `הוזן על ידי ${t.created_by_name}` : 'הוזן ידנית') : null, (t.card || (state.accounts.length > 1 && t.account_id)) ? h('span', { class: 'chip' }, t.card || acctLabel(t.account_id)) : null)),
+      h('td', {}, h('div', { class: 'cell-desc', title: t.description }, t.description, h('button', { class: 'who-btn', type: 'button', title: 'מי זה?', 'aria-label': `מי זה? ${t.description}`, onclick: () => whoIs(t.description).catch((e) => toast(e.message, true)) }, '?')), h('div', { class: 'chips' }, t.source === 'manual' ? h('span', { class: 'chip' }, t.created_by_name ? `הוזן על ידי ${t.created_by_name}` : 'הוזן ידנית') : null, (t.card || (state.accounts.length > 1 && t.account_id)) ? h('span', { class: 'chip' }, t.card || acctLabel(t.account_id)) : null)),
       h('td', {}, sel), h('td', { class: 'amt ' + (t.amount > 0 ? 'pos' : '') }, (t.amount > 0 ? '+' : '') + fmt2(t.amount)),
       h('td', {}, t.source === 'manual' ? h('button', { class: 'btn sm danger', type: 'button', onclick: async () => { if (!confirm('למחוק את העסקה?')) return; await api('DELETE', `/api/transactions/${t.id}`); load(); } }, 'מחיקה') : null));
   }

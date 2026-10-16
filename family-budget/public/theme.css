@@ -170,3 +170,10 @@ dialog { border: 0; border-radius: 24px; box-shadow: 0 40px 80px -30px rgba(0,0,
 .acct-grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
 
 .status-card.tone-ok, .status-card.tone-none { background: radial-gradient(900px 380px at 100% 0%, var(--petrol-3), transparent 62%), linear-gradient(160deg, var(--petrol-2), var(--petrol) 70%); box-shadow: 0 30px 60px -28px rgba(13,58,66,.75); }
+
+/* ---- מי זה? ---- */
+.sc-who { color: var(--ink-2); font-size: .88rem; }
+.who-btn { margin-inline-start: 8px; width: 22px; height: 22px; padding: 0; border-radius: 50%; border: 0; background: var(--accent-soft); color: var(--petrol); font-weight: 600; font-size: .78rem; cursor: pointer; vertical-align: middle; }
+.who-btn:hover { background: var(--mint); }
+.who .who-name { font-size: 1.3rem; font-weight: 600; margin: 4px 0; }
+.who .row { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; }

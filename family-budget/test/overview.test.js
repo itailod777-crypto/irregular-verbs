@@ -36,3 +36,16 @@ test('יתרות: עו"ש, חיוב הבא בכרטיס, ומשכנתא נספר
   assert.equal(ov.totals.retailDebt, 51069.41, 'היתרה העדכנית ולא הסכום המקורי');
   assert.equal(ov.securities[0].positions[0].name, 'קרן');
 });
+
+test('התראות: יתרה לא מספיקה לחיובי הכרטיסים, וחיוב כרטיס גבוה מהקודם', async (t) => {
+  const { alerts } = require('../src/alerts');
+  const ctx = await startApp(); t.after(ctx.close);
+  ctx.db.prepare("INSERT INTO accounts (label, company) VALUES ('Financy','financy')").run();
+  saveFinAccounts(ctx.db, 1, normalizeAccounts(ITEMS));
+  const month = new Date().toISOString().slice(0, 7);
+  const out = alerts(ctx.db, month);
+  const bal = out.find((a) => a.type === 'balance');
+  assert.ok(bal && bal.level === 'crit', 'בעו"ש 1,000 ויורדים 12,380');
+  assert.ok(out.some((a) => a.type === 'card') === false, 'החיוב הבא נמוך מהקודם: אין התראת חיוב גבוה');
+  assert.equal(alerts(ctx.db, '2020-01').some((a) => a.type === 'balance'), false, 'רק לחודש הנוכחי');
+});

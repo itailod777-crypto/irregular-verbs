@@ -137,6 +137,13 @@ function createApp({ db, vault, port, createScraperImpl, lan, updater }) {
   app.post('/api/vault/lock', wrap((req, res) => { admin(req); vault.lock(); require('./dpapi').forget(); res.json({ ok: true }); }));
 
   // ---- חשבונות (פרטי כניסה נשמרים רק בכספת המוצפנת ולעולם לא מוחזרים) ----
+  app.post('/api/merchants/identify', wrap((req, res) => {
+    const { identify, searchUrl } = require('./merchants');
+    const names = Array.isArray(req.body.names) ? req.body.names.slice(0, 300).map(String) : [];
+    const results = {};
+    for (const n of names) results[n] = { info: identify(n), search: searchUrl(n) };
+    res.json({ results });
+  }));
   app.get('/api/overview', wrap((req, res) => res.json(require('./overview').buildOverview(db))));
   app.get('/api/companies', wrap((req, res) => res.json(listCompanies())));
   app.get('/api/accounts', wrap((req, res) => res.json(db.prepare('SELECT id,label,company,last_sync,last_status,paused FROM accounts ORDER BY id').all())));

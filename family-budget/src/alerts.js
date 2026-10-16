@@ -1,6 +1,7 @@
 'use strict';
 // "שימו לב": דברים שכדאי לבדוק בחודש הנבחר. הכול נקבע לפי כללים פשוטים ושקופים, בלי ניחושים.
 const { classifyWindow } = require('./recurring');
+const { getSetting } = require('./db');
 
 const money = (n) => `₪${Math.round(n).toLocaleString('he-IL')}`;
 const dateHe = (iso) => iso.split('-').reverse().join('/');
@@ -58,6 +59,23 @@ function alerts(db, month, accountId = null) {
     const sp = spent.get(b.category_id) || 0, p = sp / b.amount;
     if (p > 1) out.push({ weight: 85, level: 'crit', type: 'budget', title: `חרגתם בתקציב: ${b.name}`, text: `יצא ${money(sp)} מתוך תקציב של ${money(b.amount)} (חריגה של ${money(sp - b.amount)}).` });
     else if (p >= 0.85) out.push({ weight: 50, level: 'info', type: 'budget', title: `קרובים לתקרה: ${b.name}`, text: `יצא ${money(sp)} מתוך ${money(b.amount)}. נשארו ${money(b.amount - sp)}.` });
+  }
+  // 5. יתרה וחיובי כרטיסים (רק לחודש הנוכחי, ורק אם יש יתרות מ-Financy)
+  const nowMonth = new Date().toISOString().slice(0, 7);
+  if (month === nowMonth) {
+    let ov = null;
+    try { ov = require('./overview').buildOverview(db); } catch { /* אין יתרות */ }
+    if (ov && ov.hasData && ov.checking.length) {
+      const low = Number(getSetting(db, 'low_balance', '10000')) || 0;
+      const t = ov.totals;
+      if (t.afterCards < 0) out.push({ weight: 95, level: 'crit', type: 'balance', title: 'היתרה בעו"ש לא מספיקה לחיובי הכרטיסים', text: `בעו"ש ${money(t.cash)} ויורדים בקרוב ${money(t.cardsDue)} מהכרטיסים. חסרים ${money(-t.afterCards)}.` });
+      else if (t.afterCards < low) out.push({ weight: 88, level: 'warn', type: 'balance', title: 'יתרה נמוכה אחרי חיובי הכרטיסים', text: `אחרי חיובי הכרטיסים הקרובים (${money(t.cardsDue)}) יישארו בעו"ש ${money(t.afterCards)}.` });
+      for (const c of ov.cards) {
+        if (c.lastCharge > 0 && c.nextCharge > c.lastCharge * 1.1 && c.nextCharge - c.lastCharge >= 1000) {
+          out.push({ weight: 70, level: 'info', type: 'card', title: 'חיוב כרטיס גבוה מהקודם', text: `${c.provider} ·${c.last4}: החיוב הבא כבר ${money(c.nextCharge)}, לעומת ${money(c.lastCharge)} בחיוב הקודם.` });
+        }
+      }
+    }
   }
   return out.sort((a, b) => b.weight - a.weight).slice(0, 6).map(({ weight, ...rest }) => rest); // eslint-disable-line no-unused-vars
 }
