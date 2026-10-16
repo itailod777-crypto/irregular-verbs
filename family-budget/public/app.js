@@ -59,6 +59,8 @@ const field = (label, input, hint) => h('label', { class: 'field' }, label, inpu
 
 // הסבר פשוט בעברית במקום שגיאה טכנית (הטקסט המקורי נשאר ביומן העדכונים)
 function friendlyError(m = '', company = '') {
+  if (company === 'financy' && /PLAN|לא כוללת API/.test(m)) return 'התוכנית ב-Financy לא כוללת גישת API. צריך Starter ומעלה (באתר של Financy ← מנוי).';
+  if (company === 'financy' && /INVALID_PASSWORD/.test(m)) return 'פרטי ה-API של Financy לא נכונים. העתיקו שוב clientId, clientSecret ו-userId מ-Financy ← הגדרות ← API.';
   if (company === 'max' && /TIMEOUT|GENERIC|timed? ?out|Navigation|waiting for|selector|not found/i.test(m) && !/INVALID_PASSWORD|CHANGE_PASSWORD/.test(m)) return 'מקס שינה את דף הכניסה שלו, והכניסה האוטומטית לא עובדת כרגע. אפשר להעלות קובץ עסקאות (עמוד כרטיסים וחשבונות ← "העלאת קובץ"), וזה עובד מצוין.';
   if (/INVALID_PASSWORD/.test(m)) return 'שם המשתמש או הסיסמה לא נכונים. לחצו על "עדכון סיסמה" בכרטיס.';
   if (/CHANGE_PASSWORD/.test(m)) return 'האתר מבקש להחליף סיסמה. היכנסו לאתר, החליפו סיסמה, ואז עדכנו אותה כאן.';
@@ -444,7 +446,7 @@ async function pageBudget(view) {
 }
 
 // ---------- כרטיסים וחשבונות ----------
-const POPULAR = ['visaCal', 'isracard', 'max', 'amex', 'leumi', 'hapoalim', 'discount', 'mizrahi'];
+const POPULAR = ['financy', 'visaCal', 'isracard', 'max', 'amex', 'leumi', 'hapoalim', 'discount', 'mizrahi'];
 
 
 // שדה פרטי כניסה: שם משתמש ותעודת זהות מוצגים כטקסט רגיל (כדי לראות שלא התבלבלתם), ורק סיסמה מוסתרת, עם כפתור "הצג"

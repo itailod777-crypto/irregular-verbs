@@ -11,18 +11,28 @@ const HEBREW_NAMES = {
   max: 'מקס', visaCal: 'ויזה כאל', isracard: 'ישראכרט', amex: 'אמריקן אקספרס', oneZero: 'וואן זירו (דורש SMS)',
   behatsdaa: 'בהצדעה', beyahadBishvilha: 'ביחד בשבילך',
 };
-const SECRET_FIELDS = new Set(['password', 'otpLongTermToken', 'card6Digits', 'id', 'nationalID', 'userCode', 'num', 'username']);
+const SECRET_FIELDS = new Set(['clientId', 'clientSecret', 'userId', 'password', 'otpLongTermToken', 'card6Digits', 'id', 'nationalID', 'userCode', 'num', 'username']);
+
+// מקור נתונים דרך Open Banking (Financy): בלי סיסמאות בנק, רק מפתח API שנוצר באפליקציה שלהם
+const FINANCY = {
+  id: 'financy', name: 'פיננסי (Open Banking) - מומלץ', needsSms: false,
+  fields: [
+    { key: 'clientId', label: 'clientId (מ-Financy ← הגדרות ← API)', secret: false },
+    { key: 'clientSecret', label: 'clientSecret', secret: true },
+    { key: 'userId', label: 'userId', secret: false },
+  ],
+};
 
 function listCompanies() {
   const { SCRAPERS } = require('israeli-bank-scrapers');
-  return Object.entries(SCRAPERS).map(([id, def]) => ({
+  return [FINANCY, ...Object.entries(SCRAPERS).map(([id, def]) => ({
     id,
     name: HEBREW_NAMES[id] || def.name,
     needsSms: id === 'oneZero',
     fields: def.loginFields
       .filter((f) => f !== 'otpCodeRetriever')
       .map((f) => ({ key: f, label: LABELS[f] || f, secret: f === 'password' || f === 'otpLongTermToken' })),
-  }));
+  }))];
 }
 
 function getCompany(id) { return listCompanies().find((c) => c.id === id) || null; }

@@ -74,7 +74,7 @@ async function launchOwnBrowser({ executablePath, showBrowser, profileDir }) {
   return puppeteer.launch({ ...(executablePath ? { executablePath } : {}), ...(profileDir ? { userDataDir: profileDir } : {}), headless: !showBrowser, ignoreDefaultArgs: ['--enable-automation'], args: ['--lang=he-IL', '--disable-blink-features=AutomationControlled', ...(process.getuid && process.getuid() === 0 ? ['--no-sandbox'] : [])] });
 }
 
-async function syncAccount({ db, vault, account, createScraperImpl, launchBrowser, now = new Date() }) {
+async function syncAccount({ db, vault, account, createScraperImpl, launchBrowser, now = new Date(), opts = {} }) {
   const startedAt = now.toISOString();
   const log = db.prepare('INSERT INTO sync_log (started_at, account_id, account_label, status) VALUES (?,?,?,?)')
     .run(startedAt, account.id, account.label, 'running');
@@ -98,6 +98,12 @@ async function syncAccount({ db, vault, account, createScraperImpl, launchBrowse
     const start = account.last_sync
       ? new Date(new Date(account.last_sync).getTime() - 14 * 86400000) // חפיפה של שבועיים; הכפילויות מסוננות
       : new Date(now.getFullYear(), now.getMonth() - initialMonths, now.getDate());
+    if (account.company === 'financy') { // Open Banking: בלי דפדפן ובלי סיסמאות בנק
+      const { fetchFinancy } = require('./financy');
+      const fin = await (opts.fetchFinancy || fetchFinancy)(creds, start);
+      const r = addTransactions(db, fin.rows, { source: 'scraper', accountId: account.id });
+      return finish('ok', { added: r.added, duplicates: r.duplicates, pendingSkipped: 0 });
+    }
     const executablePath = findBrowser();
     const showBrowser = getSetting(db, 'show_browser', '0') === '1';
     if (launchBrowser) browser = await launchBrowser({ executablePath, showBrowser, profileDir: account.company !== 'isracard' ? undefined : require('path').join(require('./config').DATA_DIR, 'browser-profiles', `${account.company}-${account.id}`) });
@@ -124,13 +130,13 @@ async function syncAccount({ db, vault, account, createScraperImpl, launchBrowse
     const r = addTransactions(db, rows, { source: 'scraper', accountId: account.id });
     return finish('ok', { added: r.added, duplicates: r.duplicates, pendingSkipped });
   } catch (e) {
-    return finish('error', { error: redact(e && e.message, creds) });
+    return finish('error', { error: redact(e && e.message, creds), errorType: e && e.errorType });
   } finally {
     if (browser) await browser.close().catch(() => {});
   }
 }
 
-async function runSync({ db, vault, accountId = null, createScraperImpl, launchBrowser, now }) {
+async function runSync({ db, vault, accountId = null, createScraperImpl, launchBrowser, now, opts = {} }) {
   if (!createScraperImpl) {
     launchBrowser = launchBrowser || launchOwnBrowser;
     const { createScraper } = require('israeli-bank-scrapers');
@@ -146,7 +152,7 @@ async function runSync({ db, vault, accountId = null, createScraperImpl, launchB
     const accounts = accountId
       ? db.prepare('SELECT * FROM accounts WHERE id=?').all(accountId)
       : db.prepare('SELECT * FROM accounts WHERE paused=0 ORDER BY id').all();
-    for (const account of accounts) results.push(await syncAccount({ db, vault, account, createScraperImpl, launchBrowser, now }));
+    for (const account of accounts) results.push(await syncAccount({ db, vault, account, createScraperImpl, launchBrowser, now, opts }));
     if (!accountId) for (const a of db.prepare('SELECT id, label FROM accounts WHERE paused=1').all()) results.push({ accountId: a.id, label: a.label, status: 'paused', paused: true });
   } finally { releaseLock(db); }
   const failed = results.filter((r) => r.status === 'error');
