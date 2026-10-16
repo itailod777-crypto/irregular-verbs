@@ -22,7 +22,7 @@ async function getToken(creds, f) {
 }
 
 // ממפה תנועה של Financy לשורה של האפליקציה. מחזיר null כשצריך לדלג.
-function mapItem(t) {
+function mapItem(t, cardProviders) {
   if (!t || t.isDuplicate) return null;
   const date = t.date && (t.date.transactionDate || t.date.bookingDate);
   const amt = t.amount && t.amount.chargedAmount;
@@ -30,7 +30,8 @@ function mapItem(t) {
   const desc = String((t.merchantName || (t.description && t.description.description) || t.creditorName || t.debtorName || '')).trim();
   if (!desc) return null;
   // חיוב כרטיס אשראי שנגבה מהעו"ש הוא סיכום של תנועות הכרטיס שכבר נמשכות בנפרד: מדלגים כדי לא לספור פעמיים
-  const isCardProvider = /^(max|isracard|cal|visacal|visa_cal|amex|diners)$/i.test(String(t.providerId || ''));
+  const pid = String(t.providerId || '').toLowerCase();
+  const isCardProvider = (cardProviders && cardProviders.has(pid)) || /^(max|isracard|cal|visacal|visa_cal|amex|diners)$/i.test(pid);
   if (!isCardProvider && String(t.type || '') !== 'CARD' && amt.amount < 0 && CARD_ISSUERS.test(desc)) return null;
   return {
     date: String(date).slice(0, 10), amount: amt.amount, description: desc,
@@ -39,22 +40,42 @@ function mapItem(t) {
   };
 }
 
+// מזהי ספקים מסוג כרטיס אשראי לפי Financy (לא חובה: בכשל נשארים עם הזיהוי לפי שם)
+async function getCardProviders(token, f) {
+  try {
+    const res = await f(`${API}/v2/providers`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) return null;
+    const j = await res.json();
+    const ids = (Array.isArray(j) ? j : []).filter((p) => p && p.type === 'CARD' && p.providerFriendlyId).map((p) => String(p.providerFriendlyId).toLowerCase());
+    return ids.length ? new Set(ids) : null;
+  } catch { return null; }
+}
+
 async function fetchFinancy(creds, startDate, { fetchImpl = globalThis.fetch } = {}) {
   const f = fetchImpl;
-  const token = await getToken(creds, f);
+  let token = await getToken(creds, f);
+  const cardProviders = await getCardProviders(token, f);
+  let refreshed = false;
   const from = new Date(startDate).toISOString().slice(0, 10);
   const rows = []; let skipped = 0, cursor = null, pages = 0;
-  do {
+  for (;;) {
     const q = new URLSearchParams({ dateFrom: from, limit: String(PAGE), sort: '-1' });
     if (cursor) q.set('nextPage', cursor);
     const res = await f(`${API}/v2/data/transactions?${q}`, { headers: { Authorization: `Bearer ${token}` } });
-    if (res.status === 403) throw new FinancyError('התוכנית ב-Financy לא כוללת API (נדרשת Starter ומעלה).', 'PLAN');
+    if (res.status === 401 && !refreshed) { refreshed = true; token = await getToken(creds, f); continue; } // הטוקן פג: מנפיקים חדש ומנסים שוב
+    if (res.status === 403) {
+      const body = typeof res.json === 'function' ? await res.json().catch(() => ({})) : {};
+      if (body && body.type === 'ACCOUNT_LIMIT_REACHED') throw new FinancyError('חרגת ממכסת החשבונות בתוכנית ב-Financy. הסר חשבון או שדרג.', 'PLAN');
+      throw new FinancyError('התוכנית ב-Financy לא כוללת API (נדרשת Starter ומעלה).', 'PLAN');
+    }
     if (res.status === 401) throw new FinancyError('ההרשאה ל-Financy נדחתה. בדוק את פרטי ה-API.', 'INVALID_PASSWORD');
+    if (res.status === 409) throw new FinancyError('אין ב-Financy בנק או כרטיס מחובר. חבר אותם באתר של Financy.', 'GENERIC');
     if (!res.ok) throw new FinancyError(`Financy transactions failed (${res.status})`);
     const j = await res.json();
-    for (const it of j.items || []) { const r = mapItem(it); if (r) rows.push(r); else skipped++; }
+    for (const it of j.items || []) { const r = mapItem(it, cardProviders); if (r) rows.push(r); else skipped++; }
     cursor = j.nextPage || null;
-  } while (cursor && ++pages < 200);
+    if (!cursor || ++pages >= 200) break;
+  }
   return { rows, skipped };
 }
 
