@@ -419,3 +419,15 @@ test('סריקה עם דפדפן משלנו (נגד חסימת בוטים): מו
   assert.equal(seen.closed, 1, 'הדפדפן נסגר גם בכשל');
   assert.ok('executablePath' in seen.launched && 'showBrowser' in seen.launched);
 });
+
+test('אבטחה: כותרות הקשחה בכל תשובה (CSP, מסגור, מקור, הרשאות דפדפן)', async (t) => {
+  const ctx = await startApp(); t.after(ctx.close);
+  const res = await fetch(`${ctx.base || ctx.url}/`, { headers: { Host: `127.0.0.1:${new URL(ctx.base || ctx.url).port}` } });
+  assert.match(res.headers.get('content-security-policy'), /default-src 'self'/);
+  assert.equal(res.headers.get('x-frame-options'), 'DENY');
+  assert.equal(res.headers.get('x-content-type-options'), 'nosniff');
+  assert.equal(res.headers.get('cross-origin-opener-policy'), 'same-origin');
+  assert.equal(res.headers.get('cross-origin-resource-policy'), 'same-origin');
+  assert.match(res.headers.get('permissions-policy'), /camera=\(\)/);
+  assert.equal(res.headers.get('referrer-policy'), 'no-referrer');
+});
