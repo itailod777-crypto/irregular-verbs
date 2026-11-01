@@ -11,6 +11,10 @@
     {
       "name": "work-timer",
       "source": "./mods/work-timer"
+    },
+    {
+      "name": "video-to-skill",
+      "source": "./mods/video-to-skill"
     }
   ]
 }
